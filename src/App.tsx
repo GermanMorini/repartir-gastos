@@ -1,8 +1,8 @@
-import { CopyIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { BrushCleaningIcon, CheckIcon, ChevronDownIcon, CopyIcon, PlusIcon, Trash2Icon, UserIcon, UserPlusIcon, XIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { toast, Toaster } from "sonner"
 import { calcularSaldos, calcularTransferenciasPendientes, formatoARS } from "./calculos"
-import { Badge, Button, Card, Checkbox, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Input, Select, Separator, Tabs, TabsContent, TabsList, TabsTrigger, Textarea } from "./components/ui"
+import { Button, Card, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, Select, Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui"
 import { clearState, loadState, saveState } from "./storage"
 import type { Movimiento, Persona } from "./types"
 
@@ -34,7 +34,6 @@ export default function App() {
   }
 
   function borrarPersona(persona: Persona) {
-    if (!confirm(`Eliminar ${persona} también eliminará sus movimientos asociados.`)) return
     setPersonas(personas.filter((item) => item !== persona))
     setMovimientos(
       movimientos.filter((movimiento) =>
@@ -64,7 +63,6 @@ export default function App() {
   }
 
   function limpiarTodo() {
-    if (!confirm("¿Limpiar todos los datos?")) return
     clearState()
     setPersonas([])
     setMovimientos([])
@@ -73,190 +71,307 @@ export default function App() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="app-bg">
       <Toaster richColors position="top-center" />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-5 md:px-6 md:py-8">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-normal">Repartir cuentas</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Cargá gastos y transferencias realizadas para saber quién debe pagarle a quién.</p>
-          </div>
-          <Button className="btn-outline" onClick={limpiarTodo} type="button">
-            Limpiar datos
-          </Button>
-        </header>
+      <div className="app-grid">
+        <div className="app-panel">
+          <header className="app-header">
+            <span />
+            <h1>Repartir cuentas</h1>
+            <Dialog>
+              <DialogTrigger asChild>
+                <button aria-label="Limpiar datos" type="button">
+                  <BrushCleaningIcon />
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogTitle>Limpiar datos</DialogTitle>
+                <DialogDescription>Esto elimina personas, gastos y transferencias guardadas en este dispositivo.</DialogDescription>
+                <div className="dialog-actions">
+                  <DialogClose asChild>
+                    <Button className="btn-outline" type="button">Cancelar</Button>
+                  </DialogClose>
+                  <DialogClose asChild>
+                    <Button className="btn-danger" onClick={limpiarTodo} type="button">Limpiar datos</Button>
+                  </DialogClose>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </header>
 
-        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="flex flex-col gap-5">
-            <Card>
+          <section className="app-section people-section">
+            <div className="section-head">
               <h2>Personas</h2>
-              <div className="mt-4 flex gap-2">
-                <Input placeholder="Nombre" value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && agregarPersona()} />
-                <Button onClick={agregarPersona} type="button">
-                  <PlusIcon data-icon="inline-start" />
-                  Agregar
-                </Button>
+              <div className="people-actions">
+                <span>{personas.length} personas</span>
+                <button aria-label="Agregar persona" onClick={agregarPersona} type="button">
+                  <UserPlusIcon />
+                </button>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {personas.length === 0 ? <p className="empty">Todavía no hay personas.</p> : null}
-                {personas.map((persona) => (
-                  <Badge key={persona}>
-                    {persona}
-                    <button aria-label={`Eliminar ${persona}`} onClick={() => borrarPersona(persona)} type="button">
-                      <Trash2Icon data-icon="inline-start" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            </Card>
+            </div>
+            <div className="person-chips">
+              {personas.map((persona) => (
+                <div className="person-chip" key={persona}>
+                  <span className="avatar">{persona[0].toUpperCase()}</span>
+                  <span>
+                    <strong>{persona}</strong>
+                  </span>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button aria-label={`Eliminar ${persona}`} type="button">
+                        <XIcon />
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogTitle>Eliminar persona</DialogTitle>
+                      <DialogDescription>Eliminar {persona} también elimina todos sus movimientos asociados.</DialogDescription>
+                      <div className="dialog-actions">
+                        <DialogClose asChild>
+                          <Button className="btn-outline" type="button">Cancelar</Button>
+                        </DialogClose>
+                        <DialogClose asChild>
+                          <Button className="btn-danger" onClick={() => borrarPersona(persona)} type="button">Eliminar</Button>
+                        </DialogClose>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              ))}
+            </div>
+            <div className="add-person">
+              <UserIcon />
+              <Input placeholder="Añadir persona por nombre o alias" value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && agregarPersona()} />
+            </div>
+          </section>
 
-            <Card>
-              <h2>Nuevo movimiento</h2>
-              <Tabs defaultValue="gasto" className="mt-4">
-                <TabsList className="tabs-list">
-                  <TabsTrigger className="tabs-trigger" value="gasto">Gasto</TabsTrigger>
-                  <TabsTrigger className="tabs-trigger" value="transferencia">Transferencia realizada</TabsTrigger>
-                </TabsList>
-                <TabsContent className="mt-4 flex flex-col gap-3" value="gasto">
-                  <Textarea placeholder="Descripción opcional" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
+          <section className="app-section movement-form">
+            <Tabs defaultValue="gasto">
+              <TabsList className="tabs-list">
+                <TabsTrigger className="tabs-trigger" value="gasto">Gasto</TabsTrigger>
+                <TabsTrigger className="tabs-trigger" value="transferencia">Transferencia realizada</TabsTrigger>
+              </TabsList>
+              <TabsContent className="form-body" value="gasto">
+                <label>
+                  <span>Descripción</span>
+                  <Input placeholder="Ej.: Cena italiana" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
+                </label>
+                <label>
+                  <span>Total</span>
+                  <Input inputMode="decimal" min="0" placeholder="60,00" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
+                </label>
+                <label>
+                  <span>Pagado por</span>
                   <Select value={gasto.pagador} onChange={(event) => setGasto({ ...gasto, pagador: event.target.value })}>
                     <option value="">Quién pagó</option>
                     {personas.map((persona) => <option key={persona}>{persona}</option>)}
                   </Select>
-                  <Input inputMode="decimal" min="0" placeholder="Monto" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
-                  <div className="participants">
-                    <div className="flex items-center justify-between gap-3">
-                      <strong>Participantes</strong>
-                      <Button className="btn-ghost" onClick={() => setGasto({ ...gasto, participantes: personas })} type="button">Seleccionar todos</Button>
-                    </div>
-                    {personas.map((persona) => (
-                      <label className="check-row" key={persona}>
-                        <Checkbox checked={gasto.participantes.includes(persona)} onCheckedChange={(checked) => setGasto({ ...gasto, participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona) })} />
-                        {persona}
-                      </label>
-                    ))}
-                  </div>
-                  <Button onClick={agregarGasto} type="button">Agregar gasto</Button>
-                </TabsContent>
-                <TabsContent className="mt-4 flex flex-col gap-3" value="transferencia">
-                  <Textarea placeholder="Descripción opcional" value={transferencia.descripcion} onChange={(event) => setTransferencia({ ...transferencia, descripcion: event.target.value })} />
-                  <Select value={transferencia.de} onChange={(event) => setTransferencia({ ...transferencia, de: event.target.value })}>
-                    <option value="">De</option>
-                    {personas.map((persona) => <option key={persona}>{persona}</option>)}
-                  </Select>
-                  <Select value={transferencia.a} onChange={(event) => setTransferencia({ ...transferencia, a: event.target.value })}>
-                    <option value="">A</option>
-                    {personas.map((persona) => <option key={persona}>{persona}</option>)}
-                  </Select>
-                  <Input inputMode="decimal" min="0" placeholder="Monto" type="number" value={transferencia.monto} onChange={(event) => setTransferencia({ ...transferencia, monto: event.target.value })} />
-                  <Button onClick={agregarTransferencia} type="button">Agregar transferencia</Button>
-                </TabsContent>
-              </Tabs>
-            </Card>
-
-            <Card>
-              <h2>Movimientos</h2>
-              <div className="mt-4">
-                {movimientos.length === 0 ? <p className="empty">Todavía no hay movimientos.</p> : null}
-                {movimientos.length > 0 ? (
-                  <div className="table-wrap">
-                    <table className="movements-table">
-                      <thead>
-                        <tr>
-                          <th>Pagó</th>
-                          <th>Monto</th>
-                          <th>Dividido entre</th>
-                          <th aria-label="Acciones" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {movimientos.map((movimiento, index) => (
-                          <tr key={`${movimiento.tipo}-${index}`}>
-                            <td>
-                              {movimiento.tipo === "gasto" ? (
-                                <>
-                                  <strong>{movimiento.pagador}</strong>
-                                  <span>{movimiento.descripcion?.trim() || "Gasto"}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <strong>{movimiento.de}</strong>
-                                  <span>Transfirió a {movimiento.a}</span>
-                                </>
-                              )}
-                            </td>
-                            <td>{formatoARS.format(movimiento.monto)}</td>
-                            <td>{movimiento.tipo === "gasto" ? movimiento.participantes.join(", ") : "Transferencia realizada"}</td>
-                            <td>
-                              <Button className="btn-icon btn-ghost" aria-label="Eliminar movimiento" onClick={() => setMovimientos(movimientos.filter((_, item) => item !== index))} type="button">
-                                <Trash2Icon data-icon="inline-start" />
-                              </Button>
-                            </td>
-                          </tr>
+                </label>
+                <label>
+                  <span>Repartir entre</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="select-like" type="button">
+                        {gasto.participantes.length === personas.length ? "Todos los seleccionados" : `${gasto.participantes.length} seleccionados`}
+                        <ChevronDownIcon data-icon="inline-end" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="participants-menu">
+                      <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+                      <DropdownMenuSeparator className="dropdown-separator" />
+                      <DropdownMenuGroup>
+                        {personas.map((persona) => (
+                          <DropdownMenuCheckboxItem
+                            checked={gasto.participantes.includes(persona)}
+                            key={persona}
+                            onCheckedChange={(checked) =>
+                              setGasto({
+                                ...gasto,
+                                participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona),
+                              })
+                            }
+                          >
+                            {persona}
+                          </DropdownMenuCheckboxItem>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-              </div>
-            </Card>
-          </div>
+                      </DropdownMenuGroup>
+                      <DropdownMenuSeparator className="dropdown-separator" />
+                      <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: personas })} type="button">
+                        Seleccionar todos
+                      </Button>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </label>
+                <Button className="add-movement" onClick={agregarGasto} type="button">
+                  <PlusIcon data-icon="inline-start" />
+                  Añadir gasto
+                </Button>
+              </TabsContent>
+              <TabsContent className="form-body" value="transferencia">
+                <label>
+                  <span>Descripción</span>
+                  <Input placeholder="Ej.: adelanto" value={transferencia.descripcion} onChange={(event) => setTransferencia({ ...transferencia, descripcion: event.target.value })} />
+                </label>
+                <label>
+                  <span>Total</span>
+                  <Input inputMode="decimal" min="0" placeholder="30,00" type="number" value={transferencia.monto} onChange={(event) => setTransferencia({ ...transferencia, monto: event.target.value })} />
+                </label>
+                <label>
+                  <span>De</span>
+                  <Select value={transferencia.de} onChange={(event) => setTransferencia({ ...transferencia, de: event.target.value })}>
+                    <option value="">Origen</option>
+                    {personas.map((persona) => <option key={persona}>{persona}</option>)}
+                  </Select>
+                </label>
+                <label>
+                  <span>A</span>
+                  <Select value={transferencia.a} onChange={(event) => setTransferencia({ ...transferencia, a: event.target.value })}>
+                    <option value="">Destino</option>
+                    {personas.map((persona) => <option key={persona}>{persona}</option>)}
+                  </Select>
+                </label>
+                <Button className="add-movement" onClick={agregarTransferencia} type="button">
+                  <PlusIcon data-icon="inline-start" />
+                  Añadir transferencia
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </section>
 
-          <aside className="flex flex-col gap-5 lg:sticky lg:top-6 lg:self-start">
-            <Card className="summary-card">
-              <h2>Resumen por persona</h2>
-              <div className="summary-list">
-                {saldos.length === 0 ? <p className="empty">Agregá personas para ver saldos.</p> : null}
-                {saldos.map((saldo) => (
-                  <div className="summary-person" key={saldo.persona}>
-                    <div className={saldo.saldo > 0 ? "avatar avatar-positive" : "avatar"}>{saldo.persona[0].toUpperCase()}</div>
-                    <strong>{saldo.persona}</strong>
-                    <div className="summary-balance">
-                      <span className={saldo.saldo > 0 ? "positive" : ""}>{formatoARS.format(saldo.saldo)}</span>
-                      <small>{saldo.saldo > 0 ? "debe recibir" : saldo.saldo < 0 ? "debe pagar" : "saldado"}</small>
+          <section className="app-section movements-section">
+            <div className="section-head">
+              <h2>Movimientos</h2>
+              <span className="muted">{movimientos.length} movimientos</span>
+            </div>
+            {movimientos.length === 0 ? <p className="empty">Todavía no hay movimientos.</p> : null}
+            {movimientos.length > 0 ? (
+              <div className="movement-list">
+                {movimientos.map((movimiento, index) => (
+                  <div className="movement-row" key={`${movimiento.tipo}-${index}`}>
+                    <div className="movement-copy">
+                      <strong>{movimiento.descripcion?.trim() || (movimiento.tipo === "gasto" ? "Gasto" : "Transferencia")}</strong>
+                      <span>
+                        {movimiento.tipo === "gasto"
+                          ? `Pagado por ${movimiento.pagador} • entre ${movimiento.participantes.length}`
+                          : `${movimiento.de} transfirió a ${movimiento.a}`}
+                      </span>
                     </div>
+                    <strong className="movement-amount">{formatoARS.format(movimiento.monto)}</strong>
+                    <button aria-label="Eliminar movimiento" onClick={() => setMovimientos(movimientos.filter((_, item) => item !== index))} type="button">
+                      <Trash2Icon />
+                    </button>
                   </div>
                 ))}
               </div>
-            </Card>
+            ) : null}
+          </section>
 
-            <Card className="totals-card">
-              <h2>Totales</h2>
-              <div className="totals-grid">
-                <div>
-                  <span>Total gastado</span>
-                  <strong>{formatoARS.format(totalGastado)}</strong>
-                </div>
-                <div>
-                  <span>Por persona (promedio)</span>
-                  <strong>{formatoARS.format(promedio)}</strong>
-                </div>
-              </div>
-            </Card>
-
+          <section className="app-section settle-section">
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="btn-primary sticky bottom-4 w-full text-base shadow-lg" type="button">Repartir!</Button>
+                <Button className="btn-primary settle-button" type="button">Repartir!</Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogTitle>Reparto final</DialogTitle>
-                <DialogDescription>{pendientes.length === 0 ? "Las cuentas ya están equilibradas." : "Transferencias pendientes para saldar las cuentas."}</DialogDescription>
-                <Separator />
-                <div className="flex flex-col gap-3">
+              <DialogContent className="settlement-dialog">
+                <div className="success-icon"><CheckIcon /></div>
+                <DialogTitle>¡Reparto completo!</DialogTitle>
+                <DialogDescription>
+                  {pendientes.length === 0 ? "Todos los saldos están igualados." : "Así es como deberían liquidarse:"}
+                </DialogDescription>
+                <div className="settlement-summary">
+                  <strong>Resumen de liquidación</strong>
+                  {pendientes.length === 0 ? <p>Las cuentas ya están equilibradas.</p> : null}
                   {pendientes.map((transferencia) => (
-                    <div className="row" key={`${transferencia.de}-${transferencia.a}-${transferencia.monto}`}>
-                      {transferencia.de} debe transferir {formatoARS.format(transferencia.monto)} a {transferencia.a}
+                    <div className="settlement-line" key={`${transferencia.de}-${transferencia.a}-${transferencia.monto}`}>
+                      <span className="avatar">{transferencia.de[0].toUpperCase()}</span>
+                      <span>{transferencia.de}</span>
+                      <span>→</span>
+                      <span className="avatar avatar-positive">{transferencia.a[0].toUpperCase()}</span>
+                      <span>{transferencia.a}</span>
+                      <strong>{formatoARS.format(transferencia.monto)}</strong>
                     </div>
                   ))}
                 </div>
-                <Button onClick={() => navigator.clipboard.writeText(resumenCopiable).then(() => toast.success("Resumen copiado."))} type="button">
+                <DialogClose asChild>
+                  <Button className="settlement-ok" type="button">Entendido</Button>
+                </DialogClose>
+                <Button className="settlement-copy" onClick={() => navigator.clipboard.writeText(resumenCopiable).then(() => toast.success("Resumen copiado."))} type="button">
                   <CopyIcon data-icon="inline-start" />
                   Copiar resumen
                 </Button>
               </DialogContent>
             </Dialog>
-          </aside>
+            <p>Calcula los saldos y sugiere los pagos necesarios.</p>
+          </section>
         </div>
+
+        <aside className="desktop-summary">
+          <Card className="summary-card">
+            <h2>Resumen por persona</h2>
+            <div className="summary-list">
+              {saldos.length === 0 ? <p className="empty">Agregá personas para ver saldos.</p> : null}
+              {saldos.map((saldo) => (
+                <div className="summary-person" key={saldo.persona}>
+                  <div className={saldo.saldo > 0 ? "avatar avatar-positive" : "avatar"}>{saldo.persona[0].toUpperCase()}</div>
+                  <strong>{saldo.persona}</strong>
+                  <div className="summary-balance">
+                    <span className={saldo.saldo > 0 ? "positive" : ""}>{formatoARS.format(saldo.saldo)}</span>
+                    <small>{saldo.saldo > 0 ? "debe recibir" : saldo.saldo < 0 ? "debe pagar" : "saldado"}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="totals-card">
+            <h2>Totales</h2>
+            <div className="totals-grid">
+              <div>
+                <span>Total gastado</span>
+                <strong>{formatoARS.format(totalGastado)}</strong>
+              </div>
+              <div>
+                <span>Por persona (promedio)</span>
+                <strong>{formatoARS.format(promedio)}</strong>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="desktop-settle-card">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="btn-primary settle-button" type="button">Repartir!</Button>
+              </DialogTrigger>
+              <DialogContent className="settlement-dialog">
+                <div className="success-icon"><CheckIcon /></div>
+                <DialogTitle>¡Reparto completo!</DialogTitle>
+                <DialogDescription>
+                  {pendientes.length === 0 ? "Todos los saldos están igualados." : "Así es como deberían liquidarse:"}
+                </DialogDescription>
+                <div className="settlement-summary">
+                  <strong>Resumen de liquidación</strong>
+                  {pendientes.length === 0 ? <p>Las cuentas ya están equilibradas.</p> : null}
+                  {pendientes.map((transferencia) => (
+                    <div className="settlement-line" key={`${transferencia.de}-${transferencia.a}-${transferencia.monto}`}>
+                      <span className="avatar">{transferencia.de[0].toUpperCase()}</span>
+                      <span>{transferencia.de}</span>
+                      <span>→</span>
+                      <span className="avatar avatar-positive">{transferencia.a[0].toUpperCase()}</span>
+                      <span>{transferencia.a}</span>
+                      <strong>{formatoARS.format(transferencia.monto)}</strong>
+                    </div>
+                  ))}
+                </div>
+                <DialogClose asChild>
+                  <Button className="settlement-ok" type="button">Entendido</Button>
+                </DialogClose>
+                <Button className="settlement-copy" onClick={() => navigator.clipboard.writeText(resumenCopiable).then(() => toast.success("Resumen copiado."))} type="button">
+                  <CopyIcon data-icon="inline-start" />
+                  Copiar resumen
+                </Button>
+              </DialogContent>
+            </Dialog>
+            <p>Calcula los saldos y sugiere los pagos necesarios.</p>
+          </Card>
+        </aside>
       </div>
     </main>
   )

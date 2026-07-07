@@ -1,5 +1,6 @@
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 import { CheckIcon, XIcon } from "lucide-react"
 import type { ComponentProps, ReactNode } from "react"
@@ -38,6 +39,37 @@ export const TabsList = TabsPrimitive.List
 export const TabsTrigger = TabsPrimitive.Trigger
 export const TabsContent = TabsPrimitive.Content
 
+export const DropdownMenu = DropdownMenuPrimitive.Root
+export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
+export const DropdownMenuContent = DropdownMenuPrimitive.Content
+export const DropdownMenuGroup = DropdownMenuPrimitive.Group
+export const DropdownMenuLabel = DropdownMenuPrimitive.Label
+export const DropdownMenuSeparator = DropdownMenuPrimitive.Separator
+
+export function DropdownMenuCheckboxItem({
+  children,
+  checked,
+  onCheckedChange,
+}: {
+  children: ReactNode
+  checked: boolean
+  onCheckedChange: (checked: boolean) => void
+}) {
+  return (
+    <DropdownMenuPrimitive.CheckboxItem
+      checked={checked}
+      className="dropdown-checkbox-item"
+      onCheckedChange={(value) => onCheckedChange(value === true)}
+      onSelect={(event) => event.preventDefault()}
+    >
+      <DropdownMenuPrimitive.ItemIndicator className="dropdown-item-indicator">
+        <CheckIcon data-icon="inline-start" />
+      </DropdownMenuPrimitive.ItemIndicator>
+      {children}
+    </DropdownMenuPrimitive.CheckboxItem>
+  )
+}
+
 export function Checkbox({
   checked,
   onCheckedChange,
@@ -58,14 +90,15 @@ export function Checkbox({
 
 export const Dialog = DialogPrimitive.Root
 export const DialogTrigger = DialogPrimitive.Trigger
+export const DialogClose = DialogPrimitive.Close
 export const DialogTitle = DialogPrimitive.Title
 export const DialogDescription = DialogPrimitive.Description
 
-export function DialogContent({ children }: { children: ReactNode }) {
+export function DialogContent({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="dialog-overlay" />
-      <DialogPrimitive.Content className="dialog-content">
+      <DialogPrimitive.Content className={cn("dialog-content", className)}>
         {children}
         <DialogPrimitive.Close className="dialog-close" aria-label="Cerrar">
           <XIcon data-icon="inline-start" />
