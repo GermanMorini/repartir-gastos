@@ -1,6 +1,8 @@
+import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
+import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
@@ -14,6 +16,30 @@ export function Button({ className, ...props }: ComponentProps<"button">) {
 
 export function Card({ className, ...props }: ComponentProps<"section">) {
   return <section className={cn("card", className)} {...props} />
+}
+
+export function Table({ className, ...props }: ComponentProps<"table">) {
+  return <table className={cn("table", className)} {...props} />
+}
+
+export function TableHeader(props: ComponentProps<"thead">) {
+  return <thead {...props} />
+}
+
+export function TableBody(props: ComponentProps<"tbody">) {
+  return <tbody {...props} />
+}
+
+export function TableRow(props: ComponentProps<"tr">) {
+  return <tr {...props} />
+}
+
+export function TableHead({ className, ...props }: ComponentProps<"th">) {
+  return <th className={cn("table-head", className)} {...props} />
+}
+
+export function TableCell({ className, ...props }: ComponentProps<"td">) {
+  return <td className={cn("table-cell", className)} {...props} />
 }
 
 export function Input(props: ComponentProps<"input">) {
@@ -96,6 +122,42 @@ export function Badge({ className, ...props }: ComponentProps<"span">) {
 
 export function Separator() {
   return <div className="separator" />
+}
+
+export const Accordion = AccordionPrimitive.Root
+export const AccordionItem = AccordionPrimitive.Item
+
+export function AccordionTrigger({ children, className, ...props }: ComponentProps<typeof AccordionPrimitive.Trigger>) {
+  return (
+    <AccordionPrimitive.Header>
+      <AccordionPrimitive.Trigger className={cn("accordion-trigger", className)} {...props}>
+        {children}
+        <ChevronDownIcon data-icon="inline-end" />
+      </AccordionPrimitive.Trigger>
+    </AccordionPrimitive.Header>
+  )
+}
+
+export function AccordionContent({ children, className, ...props }: ComponentProps<typeof AccordionPrimitive.Content>) {
+  return (
+    <AccordionPrimitive.Content className={cn("accordion-content", className)} {...props}>
+      <div>{children}</div>
+    </AccordionPrimitive.Content>
+  )
+}
+
+export function ScrollArea({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <ScrollAreaPrimitive.Root className={cn("scroll-area", className)}>
+      <ScrollAreaPrimitive.Viewport className="scroll-area-viewport">{children}</ScrollAreaPrimitive.Viewport>
+      <ScrollAreaPrimitive.Scrollbar className="scroll-area-scrollbar" orientation="vertical">
+        <ScrollAreaPrimitive.Thumb className="scroll-area-thumb" />
+      </ScrollAreaPrimitive.Scrollbar>
+      <ScrollAreaPrimitive.Scrollbar className="scroll-area-scrollbar" orientation="horizontal">
+        <ScrollAreaPrimitive.Thumb className="scroll-area-thumb" />
+      </ScrollAreaPrimitive.Scrollbar>
+    </ScrollAreaPrimitive.Root>
+  )
 }
 
 export const Tabs = TabsPrimitive.Root

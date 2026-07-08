@@ -1,9 +1,9 @@
-import { BrushCleaningIcon, CheckIcon, ChevronDownIcon, CopyIcon, PlusIcon, Trash2Icon, UserIcon, UserPlusIcon, XIcon } from "lucide-react"
+import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, PlusIcon, ReceiptTextIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties, ReactNode } from "react"
 import { toast, Toaster } from "sonner"
-import { calcularSaldos, calcularTransferenciasPendientes, formatoARS } from "./calculos"
-import { Button, Card, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui"
+import { calcularSaldos, calcularTransferenciasPendientes, formatoARS, getMatrizCalculos, getResumenPersona } from "./calculos"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, Button, Card, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui"
 import { clearState, loadState, saveState } from "./storage"
 import type { Movimiento, Persona } from "./types"
 
@@ -53,6 +53,10 @@ function SlidingSettlement({ children }: { children: ReactNode }) {
   )
 }
 
+function iniciales(persona: Persona) {
+  return persona.split(/\s+/).filter(Boolean).slice(0, 2).map((parte) => parte[0]?.toUpperCase()).join("") || persona[0]?.toUpperCase() || "?"
+}
+
 export default function App() {
   const [personas, setPersonas] = useState<Persona[]>(() => loadState().personas)
   const [movimientos, setMovimientos] = useState<Movimiento[]>(() => loadState().movimientos)
@@ -64,13 +68,14 @@ export default function App() {
   useEffect(() => saveState({ personas, movimientos }), [personas, movimientos])
 
   const saldos = useMemo(() => calcularSaldos(personas, movimientos), [personas, movimientos])
+  const matrizCalculos = useMemo(() => getMatrizCalculos(personas, movimientos), [personas, movimientos])
   const pendientes = useMemo(() => calcularTransferenciasPendientes(saldos), [saldos])
   const totalGastado = saldos.reduce((total, saldo) => total + saldo.totalPagadoEnGastos, 0)
   const promedio = personas.length ? totalGastado / personas.length : 0
-  const firmaResumen = "Resumen hecho con https://germanmorini.github.io/repartir-gastos/"
+  const firmaResumen = "💲 Resumen hecho con https://germanmorini.github.io/repartir-gastos/"
   const resumenCopiable = pendientes.length
-    ? `Reparto final:\n${pendientes.map((t) => `- ${t.de} transfiere ${formatoARS.format(t.monto)} a ${t.a}`).join("\n")}\n${firmaResumen}`
-    : `Reparto final:\nLas cuentas ya están equilibradas.\n${firmaResumen}`
+    ? `Reparto final:\n${pendientes.map((t) => `- ${t.de} transfiere ${formatoARS.format(t.monto)} a ${t.a}`).join("\n")}\n\n${firmaResumen}`
+    : `Reparto final:\nLas cuentas ya están equilibradas.\n\n${firmaResumen}`
 
   function agregarPersona() {
     const limpia = nombre.trim()
@@ -119,6 +124,45 @@ export default function App() {
 
   function nombreMovimiento(movimiento: Movimiento) {
     return movimiento.descripcion?.trim() || (movimiento.tipo === "gasto" ? "Gasto" : "Transferencia")
+  }
+
+  function resultadoPersona(persona: Persona, saldo: number) {
+    const centavos = Math.round(saldo * 100)
+    if (centavos < 0) return `Debe pagar ${formatoARS.format(Math.abs(saldo))}`
+    if (centavos > 0) return `Debe recibir ${formatoARS.format(saldo)}`
+    return `${persona} está al día`
+  }
+
+  function resultadoCopiable(resumen: ReturnType<typeof getResumenPersona>) {
+    const centavos = Math.round(resumen.saldo * 100)
+    if (centavos < 0) return `debe pagar ${formatoARS.format(Math.abs(resumen.saldo))}`
+    if (centavos > 0) return `le deben pagar ${formatoARS.format(resumen.saldo)}`
+    return "está al día"
+  }
+
+  function formatoSaldoMatriz(monto: number) {
+    const centavos = Math.round(monto * 100)
+    const valor = formatoARS.format(Math.abs(monto)).replace(/\s/g, "")
+    if (centavos === 0) return valor
+    return `${centavos > 0 ? "+" : "-"}${valor}`
+  }
+
+  function textoResumenPersona(resumen: ReturnType<typeof getResumenPersona>) {
+    const detalle = [
+      ...resumen.gastosDondeParticipo.map(({ movimiento, montoParte }) => `- ${nombreMovimiento(movimiento)}: le tocaba ${formatoARS.format(montoParte)} de ${formatoARS.format(movimiento.monto)}`),
+      ...resumen.gastosQuePago.map((movimiento) => `- ${nombreMovimiento(movimiento)}: puso ${formatoARS.format(movimiento.monto)}`),
+      ...resumen.transferenciasEnviadas.map((movimiento) => `- Pagó a ${movimiento.a}: ${formatoARS.format(movimiento.monto)}`),
+      ...resumen.transferenciasRecibidas.map((movimiento) => `- Recibió de ${movimiento.de}: ${formatoARS.format(movimiento.monto)}`),
+    ]
+
+    return [
+      `Resumen de ${resumen.persona}:`,
+      `- Le tocaba gastar: ${formatoARS.format(resumen.totalLeTocaba)}`,
+      `- Ya salió de su bolsillo: ${formatoARS.format(resumen.totalSalioBolsillo)}`,
+      `- Ya recibió: ${formatoARS.format(resumen.totalRecibido)}`,
+      `- Resultado: ${resultadoCopiable(resumen)}`,
+      ...(detalle.length ? ["", "Detalle:", ...detalle] : []),
+    ].join("\n")
   }
 
   function abrirEdicion(index: number, movimiento: Movimiento) {
@@ -242,7 +286,7 @@ export default function App() {
                 <TabsTrigger className="tabs-trigger" value="transferencia">Transferencia</TabsTrigger>
               </TabsList>
               <TabsContent className="form-body" value="gasto">
-                <p className="tab-hint">Carga un gasto y entre quienes se reparte.</p>
+                <p className="tab-hint">Cargá un gasto y entre quiénes se reparte.</p>
                 <label>
                   <Input placeholder="Descripción (cena, hotel, ...)" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
                 </label>
@@ -301,7 +345,7 @@ export default function App() {
                 </Button>
               </TabsContent>
               <TabsContent className="form-body" value="transferencia">
-                <p className="tab-hint">Transferencias ya realizadas.</p>
+                <p className="tab-hint">Registrá un pago realizado.</p>
                 <label>
                   <Input placeholder="Descripción (cena, hotel, ...)" value={transferencia.descripcion} onChange={(event) => setTransferencia({ ...transferencia, descripcion: event.target.value })} />
                 </label>
@@ -334,7 +378,7 @@ export default function App() {
                 </label>
                 <Button className="add-movement" onClick={agregarTransferencia} type="button">
                   <PlusIcon data-icon="inline-start" />
-                  Añadir transferencia
+                  Registrar pago realizado
                 </Button>
               </TabsContent>
             </Tabs>
@@ -359,7 +403,7 @@ export default function App() {
                             <SlidingNames names={movimiento.participantes.join(", ")} />
                           </span>
                         ) : (
-                          <span>{movimiento.de} transfirió a {movimiento.a}</span>
+                          <span>{movimiento.de} pagó {formatoARS.format(movimiento.monto)} a {movimiento.a}</span>
                         )}
                       </span>
                     </button>
@@ -454,19 +498,131 @@ export default function App() {
 
         <aside className="desktop-summary">
           <Card className="summary-card">
-            <h2>Resumen por persona</h2>
+            <div className="summary-head">
+              <h2>Resumen por persona</h2>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="btn-outline" type="button">
+                    <CalculatorIcon data-icon="inline-start" />
+                    Cálculos
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="calculations-dialog">
+                  <Card className="calculations-card">
+                    <div className="calculations-head">
+                      <div>
+                        <DialogTitle>Cálculos hechos</DialogTitle>
+                        <DialogDescription>Para revisar las cuentas hechas.</DialogDescription>
+                      </div>
+                      <Badge>{movimientos.length} movimientos</Badge>
+                    </div>
+                    <Separator />
+                    <ScrollArea className="calculations-scroll">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Movimiento</TableHead>
+                            {personas.map((persona) => <TableHead className="number" key={persona}>{persona}</TableHead>)}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {matrizCalculos.map((fila) => (
+                            <TableRow key={fila.paso}>
+                              <TableCell>{fila.movimiento} <strong className="calculation-movement-amount">({formatoARS.format(fila.monto)})</strong></TableCell>
+                              {personas.map((persona) => {
+                                const saldo = fila.saldos[persona] ?? 0
+                                const estadoSaldo = saldo > 0 ? "amount-positive" : saldo < 0 ? "amount-negative" : "amount-zero"
+                                return <TableCell className={`number ${estadoSaldo}${persona === fila.personaDestacada ? " amount-highlight" : ""}`} key={persona}>{formatoSaldoMatriz(saldo)}</TableCell>
+                              })}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </Card>
+                </DialogContent>
+              </Dialog>
+            </div>
             <div className="summary-list">
               {saldos.length === 0 ? <p className="empty">Agregá personas para ver saldos.</p> : null}
-              {saldos.map((saldo) => (
-                <div className="summary-person" key={saldo.persona}>
-                  <div className={saldo.saldo > 0 ? "avatar avatar-positive" : "avatar"}>{saldo.persona[0].toUpperCase()}</div>
-                  <strong>{saldo.persona}</strong>
-                  <div className="summary-balance">
-                    <span className={saldo.saldo > 0 ? "positive" : ""}>{formatoARS.format(saldo.saldo)}</span>
-                    <small>{saldo.saldo > 0 ? "debe recibir" : saldo.saldo < 0 ? "debe pagar" : "saldado"}</small>
-                  </div>
-                </div>
-              ))}
+              {saldos.map((saldo) => {
+                const resumen = getResumenPersona(saldo.persona, movimientos)
+                const fecha = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date())
+                const estado = Math.round(resumen.saldo * 100) < 0 ? "negative" : Math.round(resumen.saldo * 100) > 0 ? "positive" : "neutral"
+                const pendiente = Math.round(resumen.saldo * 100) > 0 ? "Debe recibir" : Math.round(resumen.saldo * 100) < 0 ? "Debe pagar" : "Está al día"
+
+                return (
+                  <Dialog key={saldo.persona}>
+                    <DialogTrigger asChild>
+                      <button className="summary-person" type="button">
+                        <div className={resumen.saldo > 0 ? "avatar avatar-positive" : "avatar"}>{saldo.persona[0].toUpperCase()}</div>
+                        <strong>{saldo.persona}</strong>
+                        <div className="summary-balance">
+                          <span className={resumen.saldo > 0 ? "positive" : resumen.saldo < 0 ? "negative" : ""}>{formatoARS.format(resumen.saldo)}</span>
+                          <small>Pendiente</small>
+                        </div>
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="receipt-dialog">
+                      <div className="receipt">
+                        <header className="receipt-head">
+                          <span className="receipt-avatar">{iniciales(saldo.persona)}</span>
+                          <div>
+                            <DialogTitle>Resumen de {saldo.persona}</DialogTitle>
+                            <DialogDescription>Generado el {fecha}</DialogDescription>
+                          </div>
+                          <Button className="btn-outline receipt-copy" onClick={() => navigator.clipboard.writeText(textoResumenPersona(resumen)).then(() => toast.success("Resumen copiado."))} type="button">
+                            <CopyIcon data-icon="inline-start" />
+                            Copiar resumen
+                          </Button>
+                        </header>
+                        <Separator />
+                        {!resumen.tieneMovimientos ? (
+                          <p className="empty">{saldo.persona} todavía no tiene movimientos.</p>
+                        ) : (
+                          <>
+                            <Card className={`receipt-result receipt-result-${estado}`}>
+                              <strong>{resultadoPersona(saldo.persona, resumen.saldo)}</strong>
+                            </Card>
+                            <div className="receipt-table">
+                              <div><UsersIcon data-icon="inline-start" /><span>Le tocaba gastar</span><small></small><strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></div>
+                              <div><WalletCardsIcon data-icon="inline-start" /><span>Ya salió de su bolsillo</span><small></small><strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></div>
+                              <div><ArrowDownLeftIcon data-icon="inline-start" /><span>Ya recibió</span><small></small><strong>{formatoARS.format(resumen.totalRecibido)}</strong></div>
+                              <div className="receipt-balance"><span>Resultado final</span><small>{pendiente}</small><strong className={estado}>{formatoARS.format(Math.abs(resumen.saldo))}</strong></div>
+                            </div>
+                            <Separator />
+                            <Accordion className="receipt-detail" collapsible type="single">
+                              <AccordionItem value="detalle">
+                                <AccordionTrigger>Detalle</AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="receipt-detail-list">
+                                      <section>
+                                        <h3><ReceiptTextIcon data-icon="inline-start" />Gastos donde participó <strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></h3>
+                                        {resumen.gastosDondeParticipo.map(({ movimiento, montoParte }, index) => <p key={`participado-${index}`}>{nombreMovimiento(movimiento)} <span>le tocaba {formatoARS.format(montoParte)} de {formatoARS.format(movimiento.monto)}</span></p>)}
+                                      </section>
+                                      <section>
+                                        <h3><WalletCardsIcon data-icon="inline-start" />Gastos que pagó <strong>{formatoARS.format(resumen.totalPuesto)}</strong></h3>
+                                        {resumen.gastosQuePago.map((movimiento, index) => <p key={`pagado-${index}`}>{nombreMovimiento(movimiento)} <span>puso {formatoARS.format(movimiento.monto)}</span></p>)}
+                                      </section>
+                                      <section>
+                                        <h3><ArrowUpRightIcon data-icon="inline-start" />Pagos realizados <strong>{formatoARS.format(resumen.totalTransferido)}</strong></h3>
+                                        {resumen.transferenciasEnviadas.map((movimiento, index) => <p key={`enviada-${index}`}>Pagó a {movimiento.a} <span>{formatoARS.format(movimiento.monto)}</span></p>)}
+                                      </section>
+                                      <section>
+                                        <h3><ArrowDownLeftIcon data-icon="inline-start" />Pagos recibidos <strong>{formatoARS.format(resumen.totalRecibido)}</strong></h3>
+                                        {resumen.transferenciasRecibidas.map((movimiento, index) => <p key={`recibida-${index}`}>Recibió de {movimiento.de} <span>{formatoARS.format(movimiento.monto)}</span></p>)}
+                                      </section>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
+                          </>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )
+              })}
             </div>
           </Card>
 
