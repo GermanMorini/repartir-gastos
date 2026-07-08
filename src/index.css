@@ -291,8 +291,8 @@ h2 {
 }
 
 .edit-select-content {
-  max-height: none;
-  overflow: visible;
+  max-height: min(var(--radix-select-content-available-height), 14rem);
+  overflow: auto;
 }
 
 .select-item {
@@ -748,6 +748,11 @@ h2 {
 
 .movement-participants {
   display: block;
+  min-width: 0;
+}
+
+.movement-transfer-participants {
+  display: none;
   min-width: 0;
 }
 
@@ -1422,7 +1427,7 @@ h2 {
 }
 
 .category-share-card {
-  width: 1080px;
+  width: 760px;
   border-radius: 18px;
   padding: 2rem;
 }
@@ -1451,7 +1456,7 @@ h2 {
   position: fixed;
   top: 0;
   left: -99999px;
-  width: 1080px;
+  width: 760px;
   pointer-events: none;
 }
 
@@ -1820,6 +1825,13 @@ h2 {
 }
 
 @media (max-width: 430px) {
+  .dialog-content {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  }
+
   .app-bg {
     padding: 0;
   }
@@ -1866,10 +1878,24 @@ h2 {
     gap: 0.55rem;
   }
 
+  .movement-title {
+    display: block;
+  }
+
+  .movement-paid-by,
+  .movement-title .category-badge,
+  .movement-transfer-label {
+    display: none;
+  }
+
+  .movement-transfer-participants {
+    display: block;
+  }
+
   .receipt-dialog {
     width: 100vw;
-    height: 100vh;
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     top: 0;
     left: 0;
     transform: none;
@@ -1888,8 +1914,8 @@ h2 {
 
   .category-dialog {
     width: 100vw;
-    height: 100vh;
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     top: 0;
     left: 0;
     transform: none;
@@ -1917,13 +1943,13 @@ h2 {
 
   .receipt-scroll,
   .receipt-scroll .scroll-area-viewport {
-    max-height: calc(100vh - 3rem);
+    max-height: calc(100dvh - 3rem);
     border-radius: 0;
   }
 
   .receipt {
     border-radius: 0;
-    padding: 1rem;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
   }
 
   .receipt-head {
@@ -1958,9 +1984,12 @@ h2 {
     height: 1.75rem;
   }
 
-  .receipt-detail h3,
+  .receipt-detail h3 {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .receipt-detail p {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .receipt-detail h3 svg {
@@ -1969,7 +1998,7 @@ h2 {
 
   .receipt-detail h3 strong,
   .receipt-detail-amount {
-    justify-self: start;
+    justify-self: end;
   }
 
   .receipt-detail p {

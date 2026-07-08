@@ -611,7 +611,12 @@ export default function App() {
                             <SlidingNames names={movimiento.participantes.join(", ")} />
                           </span>
                         ) : (
-                          <SlidingText className="movement-transfer-label">{movimiento.de} pagó {formatoARS.format(movimiento.monto)} a {movimiento.a}</SlidingText>
+                          <>
+                            <SlidingText className="movement-transfer-label">{movimiento.de} pagó {formatoARS.format(movimiento.monto)} a {movimiento.a}</SlidingText>
+                            <span className="movement-transfer-participants">
+                              <SlidingNames names={`${movimiento.de}, ${movimiento.a}`} />
+                            </span>
+                          </>
                         )}
                       </span>
                     </button>
