@@ -1293,8 +1293,18 @@ h2 {
   height: 1rem;
 }
 
+.accordion-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .accordion-trigger[data-state="open"] svg {
   transform: rotate(180deg);
+}
+
+.accordion-trigger[data-state="open"] .accordion-label svg {
+  transform: none;
 }
 
 .accordion-content {

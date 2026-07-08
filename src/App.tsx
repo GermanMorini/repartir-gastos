@@ -95,7 +95,6 @@ function CategoryPie({ data }: { data: ResumenCategoria[] }) {
             stroke={getCategoria(item.categoria).color}
             strokeDasharray={`${largo} ${circunferencia}`}
             strokeDashoffset={-acumulado}
-            strokeLinecap="round"
             strokeWidth="28"
             transform="rotate(-90 90 90)"
           />
@@ -149,8 +148,14 @@ export default function App() {
 
   useEffect(() => saveState({ personas, movimientos }), [personas, movimientos])
 
+  const movimientosOrdenados = useMemo(
+    () => movimientos
+      .map((movimiento, index) => ({ movimiento, index }))
+      .sort((a, b) => Number(a.movimiento.tipo === "transferencia") - Number(b.movimiento.tipo === "transferencia") || a.index - b.index),
+    [movimientos],
+  )
   const saldos = useMemo(() => calcularSaldos(personas, movimientos), [personas, movimientos])
-  const matrizCalculos = useMemo(() => getMatrizCalculos(personas, movimientos), [personas, movimientos])
+  const matrizCalculos = useMemo(() => getMatrizCalculos(personas, movimientosOrdenados.map((item) => item.movimiento)), [personas, movimientosOrdenados])
   const gastosPorCategoria = useMemo(() => getGastosPorCategoria(movimientos), [movimientos])
   const pendientes = useMemo(() => calcularTransferenciasPendientes(saldos), [saldos])
   const totalGastado = saldos.reduce((total, saldo) => total + saldo.totalPagadoEnGastos, 0)
@@ -302,7 +307,18 @@ export default function App() {
       await document.fonts?.ready
       await new Promise((resolve) => requestAnimationFrame(resolve))
       const dataUrl = await toPng(calculosRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: "#ffffff" })
-      descargarImagen(dataUrl, "matriz-de-calculos.png")
+      const nombreArchivo = "matriz-de-calculos.png"
+      if (matchMedia("(max-width: 719px)").matches) {
+        const blob = await fetch(dataUrl).then((respuesta) => respuesta.blob())
+        const file = new File([blob], nombreArchivo, { type: "image/png" })
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ title: "Matriz de cálculos", files: [file] })
+        } else {
+          descargarImagen(dataUrl, nombreArchivo)
+        }
+      } else {
+        descargarImagen(dataUrl, nombreArchivo)
+      }
       toast.success("Imagen exportada.")
     } catch {
       toast.error("No se pudo exportar la imagen.")
@@ -594,7 +610,7 @@ export default function App() {
             {movimientos.length === 0 ? <p className="empty">Todavía no hay movimientos.</p> : null}
             {movimientos.length > 0 ? (
               <div className="movement-list">
-                {movimientos.map((movimiento, index) => (
+                {movimientosOrdenados.map(({ movimiento, index }) => (
                   <div className="movement-row" key={`${movimiento.tipo}-${index}`} style={movimiento.tipo === "gasto" ? { "--movement-color": getCategoria(movimiento.categoria).color } as CSSProperties : undefined}>
                     <button className="movement-edit" onClick={() => abrirEdicion(index, movimiento)} type="button">
                       <span className="movement-copy">
@@ -779,7 +795,7 @@ export default function App() {
                       <div className="calculations-head">
                         <div>
                           <DialogTitle>Cálculos hechos</DialogTitle>
-                          <DialogDescription>Cuentas hechas paso a paso. Se subraya a quien pagó o transfirió cada movimiento.</DialogDescription>
+                          <DialogDescription>Cuentas hechas paso a paso. Se subraya quién pagó o transfirió cada movimiento.</DialogDescription>
                         </div>
                         <Badge>{movimientos.length} movimientos</Badge>
                       </div>
@@ -882,7 +898,7 @@ export default function App() {
                               <Separator />
                               <Accordion className="receipt-detail" collapsible type="single" value={detalleResumenAbierto} onValueChange={setDetalleResumenAbierto}>
                                 <AccordionItem value="detalle">
-                                  <AccordionTrigger>Detalle</AccordionTrigger>
+                                  <AccordionTrigger><span className="accordion-label"><ReceiptTextIcon data-icon="inline-start" />Detalle</span></AccordionTrigger>
                                   <AccordionContent>
                                     <div className="receipt-detail-list">
                                         <section>
