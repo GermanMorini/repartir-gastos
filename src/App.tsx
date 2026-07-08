@@ -1,12 +1,57 @@
 import { BrushCleaningIcon, CheckIcon, ChevronDownIcon, CopyIcon, PlusIcon, Trash2Icon, UserIcon, UserPlusIcon, XIcon } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { toast, Toaster } from "sonner"
 import { calcularSaldos, calcularTransferenciasPendientes, formatoARS } from "./calculos"
-import { Button, Card, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, Select, Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui"
+import { Button, Card, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui"
 import { clearState, loadState, saveState } from "./storage"
 import type { Movimiento, Persona } from "./types"
 
 const sinSeleccion = ""
+type Gasto = Extract<Movimiento, { tipo: "gasto" }>
+type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
+
+function SlidingNames({ names }: { names: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [distance, setDistance] = useState(0)
+
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const measure = () => setDistance(Math.max(0, element.scrollWidth - element.clientWidth))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [names])
+
+  return (
+    <span className={distance ? "marquee is-moving" : "marquee"} ref={ref} style={{ "--slide-distance": `${distance}px` } as CSSProperties}>
+      <span>{names}</span>
+    </span>
+  )
+}
+
+function SlidingSettlement({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [distance, setDistance] = useState(0)
+
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const measure = () => setDistance(Math.max(0, element.scrollWidth - element.clientWidth))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [children])
+
+  return (
+    <div className={distance ? "settlement-marquee is-moving" : "settlement-marquee"} ref={ref} style={{ "--slide-distance": `${distance}px` } as CSSProperties}>
+      {children}
+    </div>
+  )
+}
 
 export default function App() {
   const [personas, setPersonas] = useState<Persona[]>(() => loadState().personas)
@@ -14,6 +59,7 @@ export default function App() {
   const [nombre, setNombre] = useState("")
   const [gasto, setGasto] = useState({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [] as Persona[] })
   const [transferencia, setTransferencia] = useState({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
+  const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
 
   useEffect(() => saveState({ personas, movimientos }), [personas, movimientos])
 
@@ -21,9 +67,10 @@ export default function App() {
   const pendientes = useMemo(() => calcularTransferenciasPendientes(saldos), [saldos])
   const totalGastado = saldos.reduce((total, saldo) => total + saldo.totalPagadoEnGastos, 0)
   const promedio = personas.length ? totalGastado / personas.length : 0
+  const firmaResumen = "Resumen hecho con https://germanmorini.github.io/repartir-gastos/"
   const resumenCopiable = pendientes.length
-    ? `Reparto final:\n${pendientes.map((t) => `- ${t.de} transfiere ${formatoARS.format(t.monto)} a ${t.a}`).join("\n")}`
-    : "Reparto final:\nLas cuentas ya están equilibradas."
+    ? `Reparto final:\n${pendientes.map((t) => `- ${t.de} transfiere ${formatoARS.format(t.monto)} a ${t.a}`).join("\n")}\n${firmaResumen}`
+    : `Reparto final:\nLas cuentas ya están equilibradas.\n${firmaResumen}`
 
   function agregarPersona() {
     const limpia = nombre.trim()
@@ -70,6 +117,47 @@ export default function App() {
     setTransferencia({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   }
 
+  function nombreMovimiento(movimiento: Movimiento) {
+    return movimiento.descripcion?.trim() || (movimiento.tipo === "gasto" ? "Gasto" : "Transferencia")
+  }
+
+  function abrirEdicion(index: number, movimiento: Movimiento) {
+    setEdicion({
+      index,
+      monto: String(movimiento.monto),
+      movimiento: movimiento.tipo === "gasto"
+        ? { ...movimiento, descripcion: nombreMovimiento(movimiento), participantes: [...movimiento.participantes] }
+        : { ...movimiento, descripcion: nombreMovimiento(movimiento) },
+    })
+  }
+
+  function aceptarEdicion() {
+    if (!edicion) return
+    const nombreEditado = edicion.movimiento.descripcion?.trim()
+    const monto = Number(edicion.monto)
+    if (!nombreEditado) return toast.error("El nombre no puede estar vacío.")
+    if (!Number.isFinite(monto) || monto <= 0) return toast.error("El monto debe ser positivo.")
+    if (edicion.movimiento.tipo === "gasto" && edicion.movimiento.participantes.length === 0) return toast.error("Elegí al menos un participante.")
+    if (edicion.movimiento.tipo === "transferencia" && edicion.movimiento.de === edicion.movimiento.a) return toast.error("Origen y destino deben ser distintos.")
+    setMovimientos(movimientos.map((movimiento, index) => (index === edicion.index ? { ...edicion.movimiento, descripcion: nombreEditado, monto } : movimiento)))
+    setEdicion(null)
+  }
+
+  function editarGasto(cambios: Partial<Gasto>) {
+    if (edicion?.movimiento.tipo !== "gasto") return
+    setEdicion({ ...edicion, movimiento: { ...edicion.movimiento, ...cambios } })
+  }
+
+  function editarTransferencia(cambios: Partial<Transferencia>) {
+    if (edicion?.movimiento.tipo !== "transferencia") return
+    setEdicion({ ...edicion, movimiento: { ...edicion.movimiento, ...cambios } })
+  }
+
+  function editarParticipante(persona: Persona, checked: boolean) {
+    if (edicion?.movimiento.tipo !== "gasto") return
+    editarGasto({ participantes: checked ? [...edicion.movimiento.participantes, persona] : edicion.movimiento.participantes.filter((item) => item !== persona) })
+  }
+
   return (
     <main className="app-bg">
       <Toaster richColors position="top-center" />
@@ -86,7 +174,7 @@ export default function App() {
               </DialogTrigger>
               <DialogContent>
                 <DialogTitle>Limpiar datos</DialogTitle>
-                <DialogDescription>Esto elimina personas, gastos y transferencias guardadas en este dispositivo.</DialogDescription>
+                <DialogDescription>Esto elimina todos los datos ingresados hasta el momento.</DialogDescription>
                 <div className="dialog-actions">
                   <DialogClose asChild>
                     <Button className="btn-outline" type="button">Cancelar</Button>
@@ -162,9 +250,15 @@ export default function App() {
                   <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
                 </label>
                 <label>
-                  <Select value={gasto.pagador} onChange={(event) => setGasto({ ...gasto, pagador: event.target.value })}>
-                    <option value="">Quién pagó</option>
-                    {personas.map((persona) => <option key={persona}>{persona}</option>)}
+                  <Select value={gasto.pagador || undefined} onValueChange={(pagador) => setGasto({ ...gasto, pagador })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Quién pagó" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                      </SelectGroup>
+                    </SelectContent>
                   </Select>
                 </label>
                 <label>
@@ -207,7 +301,7 @@ export default function App() {
                 </Button>
               </TabsContent>
               <TabsContent className="form-body" value="transferencia">
-                <p className="tab-hint">Por si ya se realizaron transferencias.</p>
+                <p className="tab-hint">Transferencias ya realizadas.</p>
                 <label>
                   <Input placeholder="Descripción (cena, hotel, ...)" value={transferencia.descripcion} onChange={(event) => setTransferencia({ ...transferencia, descripcion: event.target.value })} />
                 </label>
@@ -215,15 +309,27 @@ export default function App() {
                   <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={transferencia.monto} onChange={(event) => setTransferencia({ ...transferencia, monto: event.target.value })} />
                 </label>
                 <label>
-                  <Select value={transferencia.de} onChange={(event) => setTransferencia({ ...transferencia, de: event.target.value })}>
-                    <option value="">Origen</option>
-                    {personas.map((persona) => <option key={persona}>{persona}</option>)}
+                  <Select value={transferencia.de || undefined} onValueChange={(de) => setTransferencia({ ...transferencia, de })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Origen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                      </SelectGroup>
+                    </SelectContent>
                   </Select>
                 </label>
                 <label>
-                  <Select value={transferencia.a} onChange={(event) => setTransferencia({ ...transferencia, a: event.target.value })}>
-                    <option value="">Destino</option>
-                    {personas.map((persona) => <option key={persona}>{persona}</option>)}
+                  <Select value={transferencia.a || undefined} onValueChange={(a) => setTransferencia({ ...transferencia, a })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Destino" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                      </SelectGroup>
+                    </SelectContent>
                   </Select>
                 </label>
                 <Button className="add-movement" onClick={agregarTransferencia} type="button">
@@ -244,19 +350,19 @@ export default function App() {
               <div className="movement-list">
                 {movimientos.map((movimiento, index) => (
                   <div className="movement-row" key={`${movimiento.tipo}-${index}`}>
-                    <div className="movement-copy">
-                      <strong>{movimiento.descripcion?.trim() || (movimiento.tipo === "gasto" ? "Gasto" : "Transferencia")}</strong>
-                      {movimiento.tipo === "gasto" ? (
-                        <span className="movement-label">
-                          Pagado por {movimiento.pagador} <span aria-hidden="true">•</span>
-                          <span className="marquee">
-                            <span>{movimiento.participantes.join(", ")}</span>
+                    <button className="movement-edit" onClick={() => abrirEdicion(index, movimiento)} type="button">
+                      <span className="movement-copy">
+                        <strong>{nombreMovimiento(movimiento)}</strong>
+                        {movimiento.tipo === "gasto" ? (
+                          <span className="movement-label">
+                            Pagó {movimiento.pagador} <span aria-hidden="true">•</span>
+                            <SlidingNames names={movimiento.participantes.join(", ")} />
                           </span>
-                        </span>
-                      ) : (
-                        <span>{movimiento.de} transfirió a {movimiento.a}</span>
-                      )}
-                    </div>
+                        ) : (
+                          <span>{movimiento.de} transfirió a {movimiento.a}</span>
+                        )}
+                      </span>
+                    </button>
                     <strong className="movement-amount">{formatoARS.format(movimiento.monto)}</strong>
                     <button aria-label="Eliminar movimiento" onClick={() => setMovimientos(movimientos.filter((_, item) => item !== index))} type="button">
                       <Trash2Icon />
@@ -265,6 +371,83 @@ export default function App() {
                 ))}
               </div>
             ) : null}
+            <Dialog open={edicion !== null} onOpenChange={(open) => !open && setEdicion(null)}>
+              <DialogContent>
+                <DialogTitle>Editar movimiento</DialogTitle>
+                <DialogDescription>Cambia los datos de este movimiento</DialogDescription>
+                <form className="edit-form" onSubmit={(event) => { event.preventDefault(); aceptarEdicion() }}>
+                  <Input autoFocus placeholder="Nombre" value={edicion?.movimiento.descripcion ?? ""} onChange={(event) => setEdicion(edicion ? { ...edicion, movimiento: { ...edicion.movimiento, descripcion: event.target.value } } : null)} />
+                  <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={edicion?.monto ?? ""} onChange={(event) => setEdicion(edicion ? { ...edicion, monto: event.target.value } : null)} />
+                  {edicion?.movimiento.tipo === "gasto" ? (
+                    <>
+                      <Select value={edicion.movimiento.pagador} onValueChange={(pagador) => editarGasto({ pagador })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Quién pagó" />
+                        </SelectTrigger>
+                        <SelectContent className="edit-select-content">
+                          <SelectGroup>
+                            {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button className="select-like" type="button">
+                            {edicion.movimiento.participantes.length === personas.length ? "Todos los seleccionados" : `${edicion.movimiento.participantes.length} seleccionados`}
+                            <ChevronDownIcon data-icon="inline-end" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="participants-menu edit-participants-menu">
+                          <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+                          <DropdownMenuSeparator className="dropdown-separator" />
+                          <DropdownMenuGroup>
+                            {personas.map((persona) => (
+                              <DropdownMenuCheckboxItem
+                                checked={edicion.movimiento.tipo === "gasto" && edicion.movimiento.participantes.includes(persona)}
+                                key={persona}
+                                onCheckedChange={(checked) => editarParticipante(persona, checked)}
+                              >
+                                {persona}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </>
+                  ) : null}
+                  {edicion?.movimiento.tipo === "transferencia" ? (
+                    <>
+                      <Select value={edicion.movimiento.de} onValueChange={(de) => editarTransferencia({ de })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Origen" />
+                        </SelectTrigger>
+                        <SelectContent className="edit-select-content">
+                          <SelectGroup>
+                            {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <Select value={edicion.movimiento.a} onValueChange={(a) => editarTransferencia({ a })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Destino" />
+                        </SelectTrigger>
+                        <SelectContent className="edit-select-content">
+                          <SelectGroup>
+                            {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </>
+                  ) : null}
+                  <div className="dialog-actions">
+                    <DialogClose asChild>
+                      <Button className="btn-outline" type="button">Cancelar</Button>
+                    </DialogClose>
+                    <Button type="submit">Aceptar</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </section>
 
         </div>
@@ -312,14 +495,16 @@ export default function App() {
                 <div className="settlement-summary">
                   {pendientes.length === 0 ? <p>Las cuentas ya están equilibradas.</p> : null}
                   {pendientes.map((transferencia) => (
-                    <div className="settlement-line" key={`${transferencia.de}-${transferencia.a}-${transferencia.monto}`}>
-                      <span className="avatar">{transferencia.de[0].toUpperCase()}</span>
-                      <span>{transferencia.de}</span>
-                      <span>→</span>
-                      <span className="avatar avatar-positive">{transferencia.a[0].toUpperCase()}</span>
-                      <span>{transferencia.a}</span>
-                      <strong>{formatoARS.format(transferencia.monto)}</strong>
-                    </div>
+                    <SlidingSettlement key={`${transferencia.de}-${transferencia.a}-${transferencia.monto}`}>
+                      <div className="settlement-line">
+                        <span className="avatar">{transferencia.de[0].toUpperCase()}</span>
+                        <span>{transferencia.de}</span>
+                        <span>→</span>
+                        <span className="avatar avatar-positive">{transferencia.a[0].toUpperCase()}</span>
+                        <span>{transferencia.a}</span>
+                        <strong>{formatoARS.format(transferencia.monto)}</strong>
+                      </div>
+                    </SlidingSettlement>
                   ))}
                 </div>
                 <DialogClose asChild>
