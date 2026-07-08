@@ -104,9 +104,6 @@ export default function App() {
               <h2>Personas</h2>
               <div className="people-actions">
                 <span>{personas.length} personas</span>
-                <button aria-label="Agregar persona" onClick={agregarPersona} type="button">
-                  <UserPlusIcon />
-                </button>
               </div>
             </div>
             <div className="person-chips">
@@ -138,9 +135,15 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div className="add-person">
-              <UserIcon />
-              <Input placeholder="Añadir persona por nombre o alias" value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && agregarPersona()} />
+            <div className="add-person-row">
+              <button aria-label="Agregar persona" onClick={agregarPersona} type="button">
+                <UserPlusIcon />
+                Añadir
+              </button>
+              <div className="add-person">
+                <UserIcon />
+                <Input placeholder="Añadir persona por nombre o alias" value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && agregarPersona()} />
+              </div>
             </div>
           </section>
 
@@ -148,26 +151,23 @@ export default function App() {
             <Tabs defaultValue="gasto">
               <TabsList className="tabs-list">
                 <TabsTrigger className="tabs-trigger" value="gasto">Gasto</TabsTrigger>
-                <TabsTrigger className="tabs-trigger" value="transferencia">Transferencia realizada</TabsTrigger>
+                <TabsTrigger className="tabs-trigger" value="transferencia">Transferencia</TabsTrigger>
               </TabsList>
               <TabsContent className="form-body" value="gasto">
+                <p className="tab-hint">Carga un gasto y entre quienes se reparte.</p>
                 <label>
-                  <span>Descripción</span>
-                  <Input placeholder="Ej.: Cena italiana" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
+                  <Input placeholder="Descripción (cena, hotel, ...)" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
                 </label>
                 <label>
-                  <span>Total</span>
-                  <Input inputMode="decimal" min="0" placeholder="60,00" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
+                  <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
                 </label>
                 <label>
-                  <span>Pagado por</span>
                   <Select value={gasto.pagador} onChange={(event) => setGasto({ ...gasto, pagador: event.target.value })}>
                     <option value="">Quién pagó</option>
                     {personas.map((persona) => <option key={persona}>{persona}</option>)}
                   </Select>
                 </label>
                 <label>
-                  <span>Repartir entre</span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button className="select-like" type="button">
@@ -207,23 +207,20 @@ export default function App() {
                 </Button>
               </TabsContent>
               <TabsContent className="form-body" value="transferencia">
+                <p className="tab-hint">Por si ya se realizaron transferencias.</p>
                 <label>
-                  <span>Descripción</span>
-                  <Input placeholder="Ej.: adelanto" value={transferencia.descripcion} onChange={(event) => setTransferencia({ ...transferencia, descripcion: event.target.value })} />
+                  <Input placeholder="Descripción (cena, hotel, ...)" value={transferencia.descripcion} onChange={(event) => setTransferencia({ ...transferencia, descripcion: event.target.value })} />
                 </label>
                 <label>
-                  <span>Total</span>
-                  <Input inputMode="decimal" min="0" placeholder="30,00" type="number" value={transferencia.monto} onChange={(event) => setTransferencia({ ...transferencia, monto: event.target.value })} />
+                  <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={transferencia.monto} onChange={(event) => setTransferencia({ ...transferencia, monto: event.target.value })} />
                 </label>
                 <label>
-                  <span>De</span>
                   <Select value={transferencia.de} onChange={(event) => setTransferencia({ ...transferencia, de: event.target.value })}>
                     <option value="">Origen</option>
                     {personas.map((persona) => <option key={persona}>{persona}</option>)}
                   </Select>
                 </label>
                 <label>
-                  <span>A</span>
                   <Select value={transferencia.a} onChange={(event) => setTransferencia({ ...transferencia, a: event.target.value })}>
                     <option value="">Destino</option>
                     {personas.map((persona) => <option key={persona}>{persona}</option>)}
@@ -249,11 +246,16 @@ export default function App() {
                   <div className="movement-row" key={`${movimiento.tipo}-${index}`}>
                     <div className="movement-copy">
                       <strong>{movimiento.descripcion?.trim() || (movimiento.tipo === "gasto" ? "Gasto" : "Transferencia")}</strong>
-                      <span>
-                        {movimiento.tipo === "gasto"
-                          ? `Pagado por ${movimiento.pagador} • entre ${movimiento.participantes.length}`
-                          : `${movimiento.de} transfirió a ${movimiento.a}`}
-                      </span>
+                      {movimiento.tipo === "gasto" ? (
+                        <span className="movement-label">
+                          Pagado por {movimiento.pagador} <span aria-hidden="true">•</span>
+                          <span className="marquee">
+                            <span>{movimiento.participantes.join(", ")}</span>
+                          </span>
+                        </span>
+                      ) : (
+                        <span>{movimiento.de} transfirió a {movimiento.a}</span>
+                      )}
                     </div>
                     <strong className="movement-amount">{formatoARS.format(movimiento.monto)}</strong>
                     <button aria-label="Eliminar movimiento" onClick={() => setMovimientos(movimientos.filter((_, item) => item !== index))} type="button">
@@ -265,42 +267,6 @@ export default function App() {
             ) : null}
           </section>
 
-          <section className="app-section settle-section">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="btn-primary settle-button" type="button">Repartir!</Button>
-              </DialogTrigger>
-              <DialogContent className="settlement-dialog">
-                <div className="success-icon"><CheckIcon /></div>
-                <DialogTitle>¡Reparto completo!</DialogTitle>
-                <DialogDescription>
-                  {pendientes.length === 0 ? "Todos los saldos están igualados." : "Así es como deberían liquidarse:"}
-                </DialogDescription>
-                <div className="settlement-summary">
-                  <strong>Resumen de liquidación</strong>
-                  {pendientes.length === 0 ? <p>Las cuentas ya están equilibradas.</p> : null}
-                  {pendientes.map((transferencia) => (
-                    <div className="settlement-line" key={`${transferencia.de}-${transferencia.a}-${transferencia.monto}`}>
-                      <span className="avatar">{transferencia.de[0].toUpperCase()}</span>
-                      <span>{transferencia.de}</span>
-                      <span>→</span>
-                      <span className="avatar avatar-positive">{transferencia.a[0].toUpperCase()}</span>
-                      <span>{transferencia.a}</span>
-                      <strong>{formatoARS.format(transferencia.monto)}</strong>
-                    </div>
-                  ))}
-                </div>
-                <DialogClose asChild>
-                  <Button className="settlement-ok" type="button">Entendido</Button>
-                </DialogClose>
-                <Button className="settlement-copy" onClick={() => navigator.clipboard.writeText(resumenCopiable).then(() => toast.success("Resumen copiado."))} type="button">
-                  <CopyIcon data-icon="inline-start" />
-                  Copiar resumen
-                </Button>
-              </DialogContent>
-            </Dialog>
-            <p>Calcula los saldos y sugiere los pagos necesarios.</p>
-          </section>
         </div>
 
         <aside className="desktop-summary">
@@ -333,9 +299,6 @@ export default function App() {
                 <strong>{formatoARS.format(promedio)}</strong>
               </div>
             </div>
-          </Card>
-
-          <Card className="desktop-settle-card">
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="btn-primary settle-button" type="button">Repartir!</Button>
@@ -344,10 +307,9 @@ export default function App() {
                 <div className="success-icon"><CheckIcon /></div>
                 <DialogTitle>¡Reparto completo!</DialogTitle>
                 <DialogDescription>
-                  {pendientes.length === 0 ? "Todos los saldos están igualados." : "Así es como deberían liquidarse:"}
+                  {pendientes.length === 0 ? "Todos los saldos están igualados." : "Estas son las transferencias necesarias:"}
                 </DialogDescription>
                 <div className="settlement-summary">
-                  <strong>Resumen de liquidación</strong>
                   {pendientes.length === 0 ? <p>Las cuentas ya están equilibradas.</p> : null}
                   {pendientes.map((transferencia) => (
                     <div className="settlement-line" key={`${transferencia.de}-${transferencia.a}-${transferencia.monto}`}>
@@ -369,7 +331,6 @@ export default function App() {
                 </Button>
               </DialogContent>
             </Dialog>
-            <p>Calcula los saldos y sugiere los pagos necesarios.</p>
           </Card>
         </aside>
       </div>
