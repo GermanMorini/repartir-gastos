@@ -7,7 +7,7 @@ export const CATEGORIAS_GASTO: { key: CategoriaGasto; label: string; color: stri
   { key: "transporte", label: "Transporte", color: "#fdba74", icon: CarIcon },
   { key: "salud", label: "Salud", color: "#fda4af", icon: HeartPulseIcon },
   { key: "ocio", label: "Ocio", color: "#d8b4fe", icon: PartyPopperIcon },
-  { key: "alojamiento", label: "Alojamiento", color: "#c4b5fd", icon: BedIcon },
+  { key: "alojamiento", label: "Alojamiento", color: "#d6b08a", icon: BedIcon },
   { key: "hogar", label: "Hogar", color: "#99f6e4", icon: HomeIcon },
   { key: "otros", label: "Otros", color: "#cbd5e1", icon: CircleEllipsisIcon },
 ]

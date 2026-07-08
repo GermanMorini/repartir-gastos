@@ -52,6 +52,10 @@ button {
   gap: 1rem;
 }
 
+.site-footer {
+  display: none;
+}
+
 .app-panel,
 .card {
   border: 1px solid var(--border);
@@ -99,6 +103,12 @@ button {
   height: 1.65rem;
 }
 
+.app-header .clear-button {
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+}
+
 .app-header > span {
   width: 2.75rem;
 }
@@ -144,15 +154,16 @@ h2 {
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  border: 1px dashed #b9c1c8;
+  border: 1px dashed #2563eb;
   border-radius: 8px;
-  background: #fff;
+  background: #2563eb;
+  color: #fff;
   padding: 0 0.8rem;
   font-weight: 650;
 }
 
 .add-person-row button:hover {
-  background: #f8faf8;
+  background: #1d4ed8;
 }
 
 .person-chips {
@@ -300,10 +311,16 @@ h2 {
   display: flex;
   min-height: 2.25rem;
   align-items: center;
+  gap: 0.4rem;
   border-radius: 6px;
   padding: 0.45rem 2rem 0.45rem 0.65rem;
   outline: none;
   font-size: 0.92rem;
+}
+
+.select-item [data-icon] {
+  margin-right: 0.4rem;
+  vertical-align: -0.15em;
 }
 
 .select-item[data-highlighted] {
@@ -628,10 +645,14 @@ h2 {
   grid-column: 1 / -1;
   min-height: 2.75rem;
   border-style: dashed;
-  border-color: #b9c1c8;
-  background: #fff;
-  color: var(--foreground);
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
   font-weight: 500;
+}
+
+.add-movement:hover {
+  background: #1d4ed8;
 }
 
 .add-expense-row {
@@ -725,6 +746,8 @@ h2 {
 }
 
 .category-badge {
+  display: inline-flex;
+  align-items: center;
   gap: 0.3rem;
   color: var(--foreground);
   white-space: nowrap;
@@ -860,13 +883,15 @@ h2 {
   gap: 0.5rem;
 }
 
-.btn-chart {
+.btn-chart,
+.btn-france {
   border-color: #2563eb;
   background: #2563eb;
   color: #fff;
 }
 
-.btn-chart:hover {
+.btn-chart:hover,
+.btn-france:hover {
   background: #1d4ed8;
 }
 
@@ -1050,8 +1075,11 @@ h2 {
 
 .dialog-close {
   position: absolute;
-  top: 0.75rem;
+  top: 0.55rem;
   right: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
 }
 
 .dialog-actions {
@@ -1081,14 +1109,6 @@ h2 {
   border-radius: 18px 18px 0 0;
   background: #fff;
   content: "";
-}
-
-.receipt-dialog .dialog-close {
-  top: 0.55rem;
-  right: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
 }
 
 .receipt-scroll {
@@ -1354,12 +1374,6 @@ h2 {
 
 .category-dialog {
   width: min(94vw, 52rem);
-}
-
-.category-dialog .dialog-close {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
 }
 
 .category-chart-card,
@@ -1679,10 +1693,6 @@ h2 {
   text-align: center;
 }
 
-.settlement-dialog .dialog-close {
-  display: none;
-}
-
 .success-icon {
   display: inline-flex;
   width: 3.6rem;
@@ -1855,6 +1865,25 @@ h2 {
   .desktop-summary {
     position: sticky;
     top: 1.5rem;
+  }
+
+  .site-footer {
+    display: flex;
+    width: min(100%, 76rem);
+    justify-content: center;
+    margin: 1rem auto 0;
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+  }
+
+  .site-footer a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .site-footer a:hover {
+    color: var(--primary);
+    text-decoration: underline;
   }
 
   .hint-mobile {

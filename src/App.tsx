@@ -148,14 +148,18 @@ export default function App() {
 
   useEffect(() => saveState({ personas, movimientos }), [personas, movimientos])
 
-  const movimientosOrdenados = useMemo(
+  const movimientosCard = useMemo(
     () => movimientos
       .map((movimiento, index) => ({ movimiento, index }))
-      .sort((a, b) => Number(a.movimiento.tipo === "transferencia") - Number(b.movimiento.tipo === "transferencia") || a.index - b.index),
+      .sort((a, b) => {
+        if (a.movimiento.tipo !== b.movimiento.tipo) return Number(a.movimiento.tipo === "transferencia") - Number(b.movimiento.tipo === "transferencia")
+        if (a.movimiento.tipo === "transferencia" || b.movimiento.tipo === "transferencia") return a.index - b.index
+        return a.movimiento.categoria.localeCompare(b.movimiento.categoria) || a.movimiento.monto - b.movimiento.monto || a.index - b.index
+      }),
     [movimientos],
   )
   const saldos = useMemo(() => calcularSaldos(personas, movimientos), [personas, movimientos])
-  const matrizCalculos = useMemo(() => getMatrizCalculos(personas, movimientosOrdenados.map((item) => item.movimiento)), [personas, movimientosOrdenados])
+  const matrizCalculos = useMemo(() => getMatrizCalculos(personas, movimientosCard.map((item) => item.movimiento)), [personas, movimientosCard])
   const gastosPorCategoria = useMemo(() => getGastosPorCategoria(movimientos), [movimientos])
   const pendientes = useMemo(() => calcularTransferenciasPendientes(saldos), [saldos])
   const totalGastado = saldos.reduce((total, saldo) => total + saldo.totalPagadoEnGastos, 0)
@@ -409,7 +413,7 @@ export default function App() {
             <h1>Repartir gastos</h1>
             <Dialog>
               <DialogTrigger asChild>
-                <button aria-label="Limpiar datos" type="button">
+                <button aria-label="Limpiar datos" className="clear-button" type="button">
                   <BrushCleaningIcon />
                 </button>
               </DialogTrigger>
@@ -592,7 +596,7 @@ export default function App() {
                 </label>
                 <Button className="add-movement" onClick={agregarTransferencia} type="button">
                   <PlusIcon data-icon="inline-start" />
-                  Registrar pago realizado
+                  Registrar transferencia
                 </Button>
               </TabsContent>
             </Tabs>
@@ -610,7 +614,7 @@ export default function App() {
             {movimientos.length === 0 ? <p className="empty">Todavía no hay movimientos.</p> : null}
             {movimientos.length > 0 ? (
               <div className="movement-list">
-                {movimientosOrdenados.map(({ movimiento, index }) => (
+                {movimientosCard.map(({ movimiento, index }) => (
                   <div className="movement-row" key={`${movimiento.tipo}-${index}`} style={movimiento.tipo === "gasto" ? { "--movement-color": getCategoria(movimiento.categoria).color } as CSSProperties : undefined}>
                     <button className="movement-edit" onClick={() => abrirEdicion(index, movimiento)} type="button">
                       <span className="movement-copy">
@@ -785,7 +789,7 @@ export default function App() {
               <div className="summary-actions">
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button className="btn-outline" type="button">
+                    <Button className="btn-france" type="button">
                       <CalculatorIcon data-icon="inline-start" />
                       Cálculos
                     </Button>
@@ -1023,6 +1027,9 @@ export default function App() {
           </Card>
         </aside>
       </div>
+      <footer className="site-footer">
+        <a href="https://github.com/GermanMorini/repartir-gastos" rel="noreferrer" target="_blank">Repositorio en GitHub</a>
+      </footer>
     </main>
   )
 }
