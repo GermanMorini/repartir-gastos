@@ -512,7 +512,7 @@ export default function App() {
                     <div className="calculations-head">
                       <div>
                         <DialogTitle>Cálculos hechos</DialogTitle>
-                        <DialogDescription>Para revisar las cuentas hechas.</DialogDescription>
+                        <DialogDescription>Cuentas hechas paso a paso. Se subraya a quién hay que pagarle de cada movimiento.</DialogDescription>
                       </div>
                       <Badge>{movimientos.length} movimientos</Badge>
                     </div>
@@ -598,7 +598,7 @@ export default function App() {
                                   <div className="receipt-detail-list">
                                       <section>
                                         <h3><ReceiptTextIcon data-icon="inline-start" />Gastos donde participó <strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></h3>
-                                        {resumen.gastosDondeParticipo.map(({ movimiento, montoParte }, index) => <p key={`participado-${index}`}>{nombreMovimiento(movimiento)} <span>le tocaba {formatoARS.format(montoParte)} de {formatoARS.format(movimiento.monto)}</span></p>)}
+                                        {resumen.gastosDondeParticipo.map(({ movimiento, montoParte }, index) => <p key={`participado-${index}`}>{nombreMovimiento(movimiento)} <span><strong>{formatoARS.format(montoParte)}</strong> de {formatoARS.format(movimiento.monto)}</span></p>)}
                                       </section>
                                       <section>
                                         <h3><WalletCardsIcon data-icon="inline-start" />Gastos que pagó <strong>{formatoARS.format(resumen.totalPuesto)}</strong></h3>

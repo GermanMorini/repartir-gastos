@@ -1,27 +1,36 @@
+import Decimal from "decimal.js"
 import type { FilaCalculo, Movimiento, Persona, SaldoPersona, TransferenciaPendiente } from "./types"
 
-const aCentavos = (monto: number) => Math.sign(monto) * Math.round((Math.abs(monto) + Number.EPSILON) * 100)
-const aPesos = (centavos: number) => centavos / 100
-const redondearMoneda = (monto: number) => aPesos(aCentavos(monto))
-
-function parteGasto(movimiento: Extract<Movimiento, { tipo: "gasto" }>, persona: Persona) {
-  if (!movimiento.participantes.includes(persona) || movimiento.participantes.length === 0) return 0
-  return movimiento.monto / movimiento.participantes.length
+type SaldoInterno = Omit<SaldoPersona, "saldo" | "totalPagadoEnGastos" | "totalDebidoEnGastos" | "totalTransferido" | "totalRecibido" | "totalSalioBolsillo"> & {
+  saldo: Decimal
+  totalPagadoEnGastos: Decimal
+  totalDebidoEnGastos: Decimal
+  totalTransferido: Decimal
+  totalRecibido: Decimal
+  totalSalioBolsillo: Decimal
 }
 
-function aplicarMovimiento(movimiento: Movimiento, existe: (persona: Persona) => boolean, aplicar: (persona: Persona, monto: number) => void) {
+const decimal = (monto: Decimal.Value) => new Decimal(monto)
+const redondearMoneda = (monto: Decimal.Value) => decimal(monto).toDecimalPlaces(2).toNumber()
+
+function parteGasto(movimiento: Extract<Movimiento, { tipo: "gasto" }>, persona: Persona) {
+  if (!movimiento.participantes.includes(persona) || movimiento.participantes.length === 0) return decimal(0)
+  return decimal(movimiento.monto).div(movimiento.participantes.length)
+}
+
+function aplicarMovimiento(movimiento: Movimiento, existe: (persona: Persona) => boolean, aplicar: (persona: Persona, monto: Decimal) => void) {
   if (movimiento.tipo === "gasto") {
     if (!existe(movimiento.pagador) || movimiento.participantes.length === 0) return
-    aplicar(movimiento.pagador, movimiento.monto)
+    aplicar(movimiento.pagador, decimal(movimiento.monto))
     for (const persona of movimiento.participantes) {
-      if (existe(persona)) aplicar(persona, -movimiento.monto / movimiento.participantes.length)
+      if (existe(persona)) aplicar(persona, decimal(movimiento.monto).div(movimiento.participantes.length).neg())
     }
     return
   }
 
   if (!existe(movimiento.de) || !existe(movimiento.a)) return
-  aplicar(movimiento.de, movimiento.monto)
-  aplicar(movimiento.a, -movimiento.monto)
+  aplicar(movimiento.de, decimal(movimiento.monto))
+  aplicar(movimiento.a, decimal(movimiento.monto).neg())
 }
 
 function textoMovimientoCalculo(movimiento: Movimiento) {
@@ -29,17 +38,17 @@ function textoMovimientoCalculo(movimiento: Movimiento) {
 }
 
 export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): SaldoPersona[] {
-  const saldos = new Map<Persona, SaldoPersona>(
+  const saldos = new Map<Persona, SaldoInterno>(
     personas.map((persona) => [
       persona,
       {
         persona,
-        saldo: 0,
-        totalPagadoEnGastos: 0,
-        totalDebidoEnGastos: 0,
-        totalTransferido: 0,
-        totalRecibido: 0,
-        totalSalioBolsillo: 0,
+        saldo: decimal(0),
+        totalPagadoEnGastos: decimal(0),
+        totalDebidoEnGastos: decimal(0),
+        totalTransferido: decimal(0),
+        totalRecibido: decimal(0),
+        totalSalioBolsillo: decimal(0),
       },
     ]),
   )
@@ -50,13 +59,13 @@ export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): 
       if (!pagador || movimiento.participantes.length === 0) continue
 
       const monto = movimiento.monto
-      pagador.totalPagadoEnGastos += monto
+      pagador.totalPagadoEnGastos = pagador.totalPagadoEnGastos.plus(monto)
 
       for (const persona of movimiento.participantes) {
         const saldo = saldos.get(persona)
         if (!saldo) continue
         const debe = parteGasto(movimiento, persona)
-        saldo.totalDebidoEnGastos += debe
+        saldo.totalDebidoEnGastos = saldo.totalDebidoEnGastos.plus(debe)
       }
     } else {
       const origen = saldos.get(movimiento.de)
@@ -64,8 +73,8 @@ export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): 
       if (!origen || !destino) continue
 
       const monto = movimiento.monto
-      origen.totalTransferido += monto
-      destino.totalRecibido += monto
+      origen.totalTransferido = origen.totalTransferido.plus(monto)
+      destino.totalRecibido = destino.totalRecibido.plus(monto)
     }
 
     aplicarMovimiento(
@@ -73,47 +82,47 @@ export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): 
       (persona) => saldos.has(persona),
       (persona, monto) => {
         const saldo = saldos.get(persona)
-        if (saldo) saldo.saldo += monto
+        if (saldo) saldo.saldo = saldo.saldo.plus(monto)
       },
     )
   }
 
   return [...saldos.values()].map((saldo) => ({
     ...saldo,
-    saldo: redondearMoneda(saldo.totalPagadoEnGastos + saldo.totalTransferido - saldo.totalRecibido - saldo.totalDebidoEnGastos),
+    saldo: redondearMoneda(saldo.totalPagadoEnGastos.plus(saldo.totalTransferido).minus(saldo.totalRecibido).minus(saldo.totalDebidoEnGastos)),
     totalPagadoEnGastos: redondearMoneda(saldo.totalPagadoEnGastos),
     totalDebidoEnGastos: redondearMoneda(saldo.totalDebidoEnGastos),
     totalTransferido: redondearMoneda(saldo.totalTransferido),
     totalRecibido: redondearMoneda(saldo.totalRecibido),
-    totalSalioBolsillo: redondearMoneda(saldo.totalPagadoEnGastos + saldo.totalTransferido),
+    totalSalioBolsillo: redondearMoneda(saldo.totalPagadoEnGastos.plus(saldo.totalTransferido)),
   }))
 }
 
 export function calcularTransferenciasPendientes(saldos: SaldoPersona[]): TransferenciaPendiente[] {
   const acreedores = saldos
-    .filter((saldo) => saldo.saldo > 0)
-    .map((saldo) => ({ persona: saldo.persona, monto: aCentavos(saldo.saldo) }))
+    .filter((saldo) => decimal(saldo.saldo).gt(0))
+    .map((saldo) => ({ persona: saldo.persona, monto: decimal(saldo.saldo) }))
   const deudores = saldos
-    .filter((saldo) => saldo.saldo < 0)
-    .map((saldo) => ({ persona: saldo.persona, monto: Math.abs(aCentavos(saldo.saldo)) }))
+    .filter((saldo) => decimal(saldo.saldo).lt(0))
+    .map((saldo) => ({ persona: saldo.persona, monto: decimal(saldo.saldo).abs() }))
   const transferencias: TransferenciaPendiente[] = []
 
   let i = 0
   let j = 0
   while (i < deudores.length && j < acreedores.length) {
-    const monto = Math.min(deudores[i].monto, acreedores[j].monto)
-    if (monto > 0) transferencias.push({ de: deudores[i].persona, a: acreedores[j].persona, monto: aPesos(monto) })
-    deudores[i].monto -= monto
-    acreedores[j].monto -= monto
-    if (deudores[i].monto === 0) i += 1
-    if (acreedores[j].monto === 0) j += 1
+    const monto = Decimal.min(deudores[i].monto, acreedores[j].monto)
+    if (monto.gt(0)) transferencias.push({ de: deudores[i].persona, a: acreedores[j].persona, monto: redondearMoneda(monto) })
+    deudores[i].monto = deudores[i].monto.minus(monto)
+    acreedores[j].monto = acreedores[j].monto.minus(monto)
+    if (deudores[i].monto.isZero()) i += 1
+    if (acreedores[j].monto.isZero()) j += 1
   }
 
   return transferencias
 }
 
 export function getMatrizCalculos(personas: Persona[], movimientos: Movimiento[]): FilaCalculo[] {
-  const saldos = new Map<Persona, number>(personas.map((persona) => [persona, 0]))
+  const saldos = new Map<Persona, Decimal>(personas.map((persona) => [persona, decimal(0)]))
   const fila = (paso: number, movimiento: string, monto: number, personaDestacada: Persona): FilaCalculo => ({
     paso,
     movimiento,
@@ -127,7 +136,7 @@ export function getMatrizCalculos(personas: Persona[], movimientos: Movimiento[]
     aplicarMovimiento(
       movimiento,
       (persona) => saldos.has(persona),
-      (persona, monto) => saldos.set(persona, (saldos.get(persona) ?? 0) + monto),
+      (persona, monto) => saldos.set(persona, (saldos.get(persona) ?? decimal(0)).plus(monto)),
     )
     filas.push(fila(index + 1, textoMovimientoCalculo(movimiento), movimiento.monto, movimiento.tipo === "gasto" ? movimiento.pagador : movimiento.a))
   })
@@ -142,8 +151,8 @@ export function getResumenPersona(persona: Persona, movimientos: Movimiento[]) {
   const totalLeTocaba = saldo?.totalDebidoEnGastos ?? 0
   const totalTransferido = saldo?.totalTransferido ?? 0
   const totalRecibido = saldo?.totalRecibido ?? 0
-  const totalSalioBolsillo = saldo?.totalSalioBolsillo ?? redondearMoneda(totalPuesto + totalTransferido)
-  const saldoPendiente = redondearMoneda(totalSalioBolsillo - totalRecibido - totalLeTocaba)
+  const totalSalioBolsillo = saldo?.totalSalioBolsillo ?? redondearMoneda(decimal(totalPuesto).plus(totalTransferido))
+  const saldoPendiente = redondearMoneda(decimal(totalSalioBolsillo).minus(totalRecibido).minus(totalLeTocaba))
   const gastosDondeParticipo = movimientos
     .filter((movimiento): movimiento is Extract<Movimiento, { tipo: "gasto" }> => movimiento.tipo === "gasto" && movimiento.participantes.includes(persona))
     .map((movimiento) => ({ movimiento, montoParte: redondearMoneda(parteGasto(movimiento, persona)) }))
