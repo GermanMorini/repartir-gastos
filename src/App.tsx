@@ -250,7 +250,7 @@ export default function App() {
                   <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
                 </label>
                 <label>
-                  <Select value={gasto.pagador || undefined} onValueChange={(pagador) => setGasto({ ...gasto, pagador })}>
+                  <Select value={gasto.pagador} onValueChange={(pagador) => setGasto({ ...gasto, pagador })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Quién pagó" />
                     </SelectTrigger>
@@ -309,7 +309,7 @@ export default function App() {
                   <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={transferencia.monto} onChange={(event) => setTransferencia({ ...transferencia, monto: event.target.value })} />
                 </label>
                 <label>
-                  <Select value={transferencia.de || undefined} onValueChange={(de) => setTransferencia({ ...transferencia, de })}>
+                  <Select value={transferencia.de} onValueChange={(de) => setTransferencia({ ...transferencia, de })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Origen" />
                     </SelectTrigger>
@@ -321,7 +321,7 @@ export default function App() {
                   </Select>
                 </label>
                 <label>
-                  <Select value={transferencia.a || undefined} onValueChange={(a) => setTransferencia({ ...transferencia, a })}>
+                  <Select value={transferencia.a} onValueChange={(a) => setTransferencia({ ...transferencia, a })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Destino" />
                     </SelectTrigger>
