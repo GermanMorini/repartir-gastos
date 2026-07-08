@@ -141,8 +141,10 @@ export default function App() {
   const [gasto, setGasto] = useState({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [] as Persona[], categoria: CATEGORIA_DEFAULT })
   const [transferencia, setTransferencia] = useState({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
+  const [detalleResumenAbierto, setDetalleResumenAbierto] = useState("")
   const exportCategoriasRef = useRef<HTMLDivElement | null>(null)
   const calculosRef = useRef<HTMLDivElement | null>(null)
+  const resumenRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => saveState({ personas, movimientos }), [personas, movimientos])
 
@@ -230,7 +232,7 @@ export default function App() {
 
   function textoResumenPersona(resumen: ReturnType<typeof getResumenPersona>) {
     const detalle = [
-      ...resumen.gastosDondeParticipo.map(({ movimiento, montoParte }) => `- ${nombreMovimiento(movimiento)}: le tocaba ${formatoARS.format(montoParte)} de ${formatoARS.format(movimiento.monto)}`),
+      ...resumen.gastosDondeParticipo.map(({ movimiento, montoParte }) => `- ${nombreMovimiento(movimiento)}: ${formatoARS.format(montoParte)} de ${formatoARS.format(movimiento.monto)}`),
       ...resumen.gastosQuePago.map((movimiento) => `- ${nombreMovimiento(movimiento)}: puso ${formatoARS.format(movimiento.monto)}`),
       ...resumen.transferenciasEnviadas.map((movimiento) => `- Pagó a ${movimiento.a}: ${formatoARS.format(movimiento.monto)}`),
       ...resumen.transferenciasRecibidas.map((movimiento) => `- Recibió de ${movimiento.de}: ${formatoARS.format(movimiento.monto)}`),
@@ -305,6 +307,24 @@ export default function App() {
       toast.error("No se pudo exportar la imagen.")
     } finally {
       calculosRef.current?.classList.remove("is-exporting")
+    }
+  }
+
+  async function exportarResumenComoImagen(persona: Persona) {
+    if (!resumenRef.current) return
+    try {
+      setDetalleResumenAbierto("detalle")
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      resumenRef.current.classList.add("is-exporting")
+      await document.fonts?.ready
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      const dataUrl = await toPng(resumenRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: "#ffffff" })
+      descargarImagen(dataUrl, `resumen-${persona.toLowerCase().replace(/\s+/g, "-")}.png`)
+      toast.success("Imagen exportada.")
+    } catch {
+      toast.error("No se pudo exportar la imagen.")
+    } finally {
+      resumenRef.current?.classList.remove("is-exporting")
     }
   }
 
@@ -481,8 +501,8 @@ export default function App() {
                         ))}
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator className="dropdown-separator" />
-                      <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: personas })} type="button">
-                        Seleccionar todos
+                      <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: gasto.participantes.length === personas.length ? [] : personas })} type="button">
+                        {gasto.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
                       </Button>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -554,6 +574,10 @@ export default function App() {
               <h2>Movimientos</h2>
               <span className="muted">{movimientos.length} movimientos</span>
             </div>
+            <p className="movement-hint">
+              <span className="hint-mobile">Tocá en un movimiento para editarlo.</span>
+              <span className="hint-desktop">Clickeá en un movimiento para editarlo.</span>
+            </p>
             {movimientos.length === 0 ? <p className="empty">Todavía no hay movimientos.</p> : null}
             {movimientos.length > 0 ? (
               <div className="movement-list">
@@ -576,9 +600,25 @@ export default function App() {
                       </span>
                     </button>
                     <strong className={`movement-amount ${movimiento.tipo === "transferencia" ? "movement-amount-transfer" : ""}`}>{formatoARS.format(movimiento.monto)}</strong>
-                    <button aria-label="Eliminar movimiento" className="movement-delete" onClick={() => setMovimientos(movimientos.filter((_, item) => item !== index))} type="button">
-                      <Trash2Icon />
-                    </button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button aria-label="Eliminar movimiento" className="movement-delete" type="button">
+                          <Trash2Icon />
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogTitle>Eliminar movimiento</DialogTitle>
+                        <DialogDescription>Esto elimina <strong>{nombreMovimiento(movimiento)}</strong> del reparto.</DialogDescription>
+                        <div className="dialog-actions">
+                          <DialogClose asChild>
+                            <Button className="btn-outline" type="button">Cancelar</Button>
+                          </DialogClose>
+                          <DialogClose asChild>
+                            <Button className="btn-danger" onClick={() => setMovimientos(movimientos.filter((_, item) => item !== index))} type="button">Eliminar</Button>
+                          </DialogClose>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 ))}
               </div>
@@ -652,6 +692,10 @@ export default function App() {
                                 </DropdownMenuCheckboxItem>
                               ))}
                             </DropdownMenuGroup>
+                            <DropdownMenuSeparator className="dropdown-separator" />
+                            <Button className="menu-action" onClick={() => edicion.movimiento.tipo === "gasto" && editarGasto({ participantes: edicion.movimiento.participantes.length === personas.length ? [] : personas })} type="button">
+                              {edicion.movimiento.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                            </Button>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -759,6 +803,10 @@ export default function App() {
                 </Dialog>
               </div>
             </div>
+            <p className="summary-hint">
+              <span className="hint-mobile">Toca en una persona para ver su hoja de liquidación.</span>
+              <span className="hint-desktop">Clickeá en una persona para ver su hoja de liquidación.</span>
+            </p>
             <div className="summary-list">
               {saldos.length === 0 ? <p className="empty">Agregá personas para ver saldos.</p> : null}
               {saldos.map((saldo) => {
@@ -780,61 +828,69 @@ export default function App() {
                       </button>
                     </DialogTrigger>
                     <DialogContent className="receipt-dialog">
-                      <div className="receipt">
-                        <header className="receipt-head">
-                          <span className="receipt-avatar">{iniciales(saldo.persona)}</span>
-                          <div>
-                            <DialogTitle>Resumen de {saldo.persona}</DialogTitle>
-                            <DialogDescription>Generado el {fecha}</DialogDescription>
-                          </div>
-                          <Button className="btn-outline receipt-copy" onClick={() => navigator.clipboard.writeText(textoResumenPersona(resumen)).then(() => toast.success("Resumen copiado."))} type="button">
-                            <CopyIcon data-icon="inline-start" />
-                            Copiar resumen
-                          </Button>
-                        </header>
-                        <Separator />
-                        {!resumen.tieneMovimientos ? (
-                          <p className="empty">{saldo.persona} todavía no tiene movimientos.</p>
-                        ) : (
-                          <>
-                            <Card className={`receipt-result receipt-result-${estado}`}>
-                              <strong>{resultadoPersona(saldo.persona, resumen.saldo)}</strong>
-                            </Card>
-                            <div className="receipt-table">
-                              <div><UsersIcon data-icon="inline-start" /><span>Le tocaba gastar</span><small></small><strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></div>
-                              <div><WalletCardsIcon data-icon="inline-start" /><span>Ya salió de su bolsillo</span><small></small><strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></div>
-                              <div><ArrowDownLeftIcon data-icon="inline-start" /><span>Ya recibió</span><small></small><strong>{formatoARS.format(resumen.totalRecibido)}</strong></div>
-                              <div className="receipt-balance"><span>Resultado final</span><small>{pendiente}</small><strong className={estado}>{formatoARS.format(Math.abs(resumen.saldo))}</strong></div>
+                      <ScrollArea className="receipt-scroll">
+                        <div className="receipt" ref={resumenRef}>
+                          <header className="receipt-head">
+                            <span className="receipt-avatar">{iniciales(saldo.persona)}</span>
+                            <div>
+                              <DialogTitle>Resumen de {saldo.persona}</DialogTitle>
+                              <DialogDescription>Generado el {fecha}</DialogDescription>
                             </div>
-                            <Separator />
-                            <Accordion className="receipt-detail" collapsible type="single">
-                              <AccordionItem value="detalle">
-                                <AccordionTrigger>Detalle</AccordionTrigger>
-                                <AccordionContent>
-                                  <div className="receipt-detail-list">
-                                      <section>
-                                        <h3><ReceiptTextIcon data-icon="inline-start" />Gastos donde participó <strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></h3>
-                                        {resumen.gastosDondeParticipo.map(({ movimiento, montoParte }, index) => <p key={`participado-${index}`}>{nombreMovimiento(movimiento)} <span><strong>{formatoARS.format(montoParte)}</strong> de {formatoARS.format(movimiento.monto)}</span></p>)}
-                                      </section>
-                                      <section>
-                                        <h3><WalletCardsIcon data-icon="inline-start" />Gastos que pagó <strong>{formatoARS.format(resumen.totalPuesto)}</strong></h3>
-                                        {resumen.gastosQuePago.map((movimiento, index) => <p key={`pagado-${index}`}>{nombreMovimiento(movimiento)} <span>puso {formatoARS.format(movimiento.monto)}</span></p>)}
-                                      </section>
-                                      <section>
-                                        <h3><ArrowUpRightIcon data-icon="inline-start" />Pagos realizados <strong>{formatoARS.format(resumen.totalTransferido)}</strong></h3>
-                                        {resumen.transferenciasEnviadas.map((movimiento, index) => <p key={`enviada-${index}`}>Pagó a {movimiento.a} <span>{formatoARS.format(movimiento.monto)}</span></p>)}
-                                      </section>
-                                      <section>
-                                        <h3><ArrowDownLeftIcon data-icon="inline-start" />Pagos recibidos <strong>{formatoARS.format(resumen.totalRecibido)}</strong></h3>
-                                        {resumen.transferenciasRecibidas.map((movimiento, index) => <p key={`recibida-${index}`}>Recibió de {movimiento.de} <span>{formatoARS.format(movimiento.monto)}</span></p>)}
-                                      </section>
-                                  </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Accordion>
-                          </>
-                        )}
-                      </div>
+                            <div className="receipt-actions">
+                              <Button className="btn-outline receipt-copy" onClick={() => navigator.clipboard.writeText(textoResumenPersona(resumen)).then(() => toast.success("Resumen copiado."))} type="button">
+                                <CopyIcon data-icon="inline-start" />
+                                Copiar resumen
+                              </Button>
+                              <Button className="receipt-export" onClick={() => exportarResumenComoImagen(saldo.persona)} type="button">
+                                <DownloadIcon data-icon="inline-start" />
+                                Exportar imagen
+                              </Button>
+                            </div>
+                          </header>
+                          <Separator />
+                          {!resumen.tieneMovimientos ? (
+                            <p className="empty">{saldo.persona} todavía no tiene movimientos.</p>
+                          ) : (
+                            <>
+                              <Card className={`receipt-result receipt-result-${estado}`}>
+                                <strong>{resultadoPersona(saldo.persona, resumen.saldo)}</strong>
+                              </Card>
+                              <div className="receipt-table">
+                                <div><UsersIcon data-icon="inline-start" /><span>Le tocaba gastar</span><small></small><strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></div>
+                                <div><WalletCardsIcon data-icon="inline-start" /><span>Ya salió de su bolsillo</span><small></small><strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></div>
+                                <div><ArrowDownLeftIcon data-icon="inline-start" /><span>Ya recibió</span><small></small><strong>{formatoARS.format(resumen.totalRecibido)}</strong></div>
+                                <div className="receipt-balance"><span>Resultado final</span><small>{pendiente}</small><strong className={estado}>{formatoARS.format(Math.abs(resumen.saldo))}</strong></div>
+                              </div>
+                              <Separator />
+                              <Accordion className="receipt-detail" collapsible type="single" value={detalleResumenAbierto} onValueChange={setDetalleResumenAbierto}>
+                                <AccordionItem value="detalle">
+                                  <AccordionTrigger>Detalle</AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="receipt-detail-list">
+                                        <section>
+                                          <h3><ReceiptTextIcon data-icon="inline-start" />Gastos donde participó <strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></h3>
+                                          {resumen.gastosDondeParticipo.map(({ movimiento, montoParte }, index) => <p key={`participado-${index}`}>{nombreMovimiento(movimiento)} <span><strong>{formatoARS.format(montoParte)}</strong> de {formatoARS.format(movimiento.monto)}</span></p>)}
+                                        </section>
+                                        <section>
+                                          <h3><WalletCardsIcon data-icon="inline-start" />Gastos que pagó <strong>{formatoARS.format(resumen.totalPuesto)}</strong></h3>
+                                          {resumen.gastosQuePago.map((movimiento, index) => <p key={`pagado-${index}`}>{nombreMovimiento(movimiento)} <span>puso {formatoARS.format(movimiento.monto)}</span></p>)}
+                                        </section>
+                                        <section>
+                                          <h3><ArrowUpRightIcon data-icon="inline-start" />Pagos realizados <strong>{formatoARS.format(resumen.totalTransferido)}</strong></h3>
+                                          {resumen.transferenciasEnviadas.map((movimiento, index) => <p key={`enviada-${index}`}>Pagó a {movimiento.a} <span>{formatoARS.format(movimiento.monto)}</span></p>)}
+                                        </section>
+                                        <section>
+                                          <h3><ArrowDownLeftIcon data-icon="inline-start" />Pagos recibidos <strong>{formatoARS.format(resumen.totalRecibido)}</strong></h3>
+                                          {resumen.transferenciasRecibidas.map((movimiento, index) => <p key={`recibida-${index}`}>Recibió de {movimiento.de} <span>{formatoARS.format(movimiento.monto)}</span></p>)}
+                                        </section>
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              </Accordion>
+                            </>
+                          )}
+                        </div>
+                      </ScrollArea>
                     </DialogContent>
                   </Dialog>
                 )

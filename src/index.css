@@ -863,6 +863,22 @@ h2 {
   background: #1d4ed8;
 }
 
+.summary-hint,
+.movement-hint {
+  margin: 0.75rem 0 0;
+  color: #7a8494;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.movement-hint {
+  margin-bottom: 1rem;
+}
+
+.hint-desktop {
+  display: none;
+}
+
 .summary-list {
   margin-top: 1.15rem;
 }
@@ -1035,11 +1051,42 @@ h2 {
 .receipt-dialog {
   width: min(94vw, 44rem);
   max-height: 92vh;
-  padding: 0;
-  overflow: auto;
+  padding: 3rem 0 0;
+  overflow: visible;
   background: transparent;
   border: 0;
   box-shadow: none;
+}
+
+.receipt-dialog::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3rem;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  background: #fff;
+  content: "";
+}
+
+.receipt-dialog .dialog-close {
+  top: 0.55rem;
+  right: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.receipt-scroll {
+  max-height: calc(92vh - 3rem);
+  border-radius: 0 0 18px 18px;
+}
+
+.receipt-scroll .scroll-area-viewport {
+  max-height: calc(92vh - 3rem);
+  overflow: auto;
 }
 
 .receipt {
@@ -1049,22 +1096,11 @@ h2 {
   gap: 1rem;
   overflow: visible;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-top: 0;
+  border-radius: 0 0 18px 18px;
   background: #fff;
   padding: 1.4rem;
   box-shadow: 0 20px 70px rgb(23 33 27 / 0.2);
-}
-
-.receipt::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 14px;
-  background: radial-gradient(circle at 12px 14px, var(--background) 0 7px, transparent 7.5px) repeat-x;
-  background-size: 24px 14px;
-  content: "";
-  pointer-events: none;
 }
 
 .receipt .separator {
@@ -1097,8 +1133,20 @@ h2 {
   font-weight: 800;
 }
 
-.receipt-copy {
+.receipt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.receipt-copy,
+.receipt-export {
   min-height: 2.75rem;
+}
+
+.receipt.is-exporting .receipt-actions {
+  display: none;
 }
 
 .receipt-result {
@@ -1516,8 +1564,14 @@ h2 {
 
 .receipt-detail p {
   grid-template-columns: minmax(0, 1fr) auto;
-  margin: 0.35rem 0 0 1.8rem;
+  margin: 0 0 0 1.8rem;
+  border-bottom: 1px solid #edf1f4;
+  padding: 0.38rem 0;
   font-size: 0.92rem;
+}
+
+.receipt-detail p:last-child {
+  border-bottom: 0;
 }
 
 .receipt-foot {
@@ -1718,6 +1772,14 @@ h2 {
     position: sticky;
     top: 1.5rem;
   }
+
+  .hint-mobile {
+    display: none;
+  }
+
+  .hint-desktop {
+    display: inline;
+  }
 }
 
 @media (max-width: 560px) {
@@ -1788,7 +1850,16 @@ h2 {
   .receipt-dialog {
     width: 100vw;
     max-height: 100vh;
-    overflow: auto;
+  }
+
+  .receipt-dialog::before {
+    border-radius: 0;
+  }
+
+  .receipt-scroll,
+  .receipt-scroll .scroll-area-viewport {
+    max-height: calc(100vh - 3rem);
+    border-radius: 0;
   }
 
   .receipt {
@@ -1806,9 +1877,13 @@ h2 {
     font-size: 1rem;
   }
 
-  .receipt-copy {
+  .receipt-actions {
     grid-column: 1 / -1;
     width: 100%;
+  }
+
+  .receipt-actions .btn {
+    flex: 1;
   }
 
   .receipt-table div > svg {
