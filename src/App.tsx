@@ -209,7 +209,7 @@ export default function App() {
         <div className="app-panel">
           <header className="app-header">
             <span />
-            <h1>Repartir cuentas</h1>
+            <h1>Repartir gastos</h1>
             <Dialog>
               <DialogTrigger asChild>
                 <button aria-label="Limpiar datos" type="button">
