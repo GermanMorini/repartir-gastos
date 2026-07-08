@@ -109,15 +109,12 @@ function CategoryPie({ data }: { data: ResumenCategoria[] }) {
   )
 }
 
-function CategoryChartShareCard({ data, total, fecha }: { data: ResumenCategoria[]; total: number; fecha: string }) {
+function CategoryChartShareCard({ data, total }: { data: ResumenCategoria[]; total: number; fecha: string }) {
   return (
     <Card className="category-share-card">
       <header>
-        <div>
-          <h2>Gastos por categoría</h2>
-          <p>Generado el {fecha}</p>
-        </div>
-        <strong>{formatoARS.format(total)}</strong>
+        <h2>Gastos por categoría</h2>
+        <p>Compará cuánto se gastó en cada categoría.</p>
       </header>
       <div className="category-chart-layout">
         <CategoryPie data={data} />
@@ -127,13 +124,13 @@ function CategoryChartShareCard({ data, total, fecha }: { data: ResumenCategoria
             <div className="category-detail-row" key={item.categoria}>
               <Badge className="category-badge"><CategoriaIcon categoria={item.categoria} />{item.label}</Badge>
               <strong>{formatoARS.format(item.monto)}</strong>
-              <span>{porcentaje(item.porcentaje)}</span>
-              <small>{item.cantidadGastos} {item.cantidadGastos === 1 ? "gasto" : "gastos"}</small>
+              <span>{item.cantidadGastos} {item.cantidadGastos === 1 ? "gasto" : "gastos"}</span>
+              <small>{porcentaje(item.porcentaje)}</small>
             </div>
           ))}
         </div>
       </div>
-      <footer>Montos expresados en $ ARS</footer>
+      <footer><span>Total gastado</span><strong>{formatoARS.format(total)}</strong></footer>
     </Card>
   )
 }
@@ -598,7 +595,7 @@ export default function App() {
             {movimientos.length > 0 ? (
               <div className="movement-list">
                 {movimientos.map((movimiento, index) => (
-                  <div className="movement-row" key={`${movimiento.tipo}-${index}`}>
+                  <div className="movement-row" key={`${movimiento.tipo}-${index}`} style={movimiento.tipo === "gasto" ? { "--movement-color": getCategoria(movimiento.categoria).color } as CSSProperties : undefined}>
                     <button className="movement-edit" onClick={() => abrirEdicion(index, movimiento)} type="button">
                       <span className="movement-copy">
                         <span className="movement-title">
@@ -791,14 +788,14 @@ export default function App() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Movimiento</TableHead>
+                              <TableHead className="calculation-movement-column">Movimiento</TableHead>
                               {personas.map((persona) => <TableHead className="number" key={persona}>{persona}</TableHead>)}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {matrizCalculos.map((fila) => (
                               <TableRow key={fila.paso}>
-                                <TableCell><SlidingText>{fila.movimiento} <strong className="calculation-movement-amount">({formatoARS.format(fila.monto)})</strong></SlidingText></TableCell>
+                                <TableCell className="calculation-movement-column"><SlidingText>{fila.movimiento} <strong className="calculation-movement-amount">({formatoARS.format(fila.monto)})</strong></SlidingText></TableCell>
                                 {personas.map((persona) => {
                                   const saldo = fila.saldos[persona] ?? 0
                                   const estadoSaldo = saldo > 0 ? "amount-positive" : saldo < 0 ? "amount-negative" : "amount-zero"
@@ -941,8 +938,8 @@ export default function App() {
                           <div className="category-detail-row" key={item.categoria}>
                             <Badge className="category-badge"><CategoriaIcon categoria={item.categoria} />{item.label}</Badge>
                             <strong>{formatoARS.format(item.monto)}</strong>
-                            <span>{porcentaje(item.porcentaje)}</span>
-                            <small>{item.cantidadGastos} {item.cantidadGastos === 1 ? "gasto" : "gastos"}</small>
+                            <span>{item.cantidadGastos} {item.cantidadGastos === 1 ? "gasto" : "gastos"}</span>
+                            <small>{porcentaje(item.porcentaje)}</small>
                           </div>
                         ))}
                       </div>
