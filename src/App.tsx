@@ -1,4 +1,4 @@
-import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
+import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
 import { toPng } from "html-to-image"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties, ReactNode } from "react"
@@ -13,7 +13,7 @@ const sinSeleccion = ""
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
 type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
 
-function SlidingNames({ names }: { names: string }) {
+function SlidingText({ children, className = "" }: { children: ReactNode; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
   const [distance, setDistance] = useState(0)
 
@@ -25,13 +25,17 @@ function SlidingNames({ names }: { names: string }) {
     const observer = new ResizeObserver(measure)
     observer.observe(element)
     return () => observer.disconnect()
-  }, [names])
+  }, [children])
 
   return (
-    <span className={distance ? "marquee is-moving" : "marquee"} ref={ref} style={{ "--slide-distance": `${distance}px` } as CSSProperties}>
-      <span>{names}</span>
+    <span className={`${className} ${distance ? "marquee is-moving" : "marquee"}`} ref={ref} style={{ "--slide-distance": `${distance}px` } as CSSProperties}>
+      <span>{children}</span>
     </span>
   )
+}
+
+function SlidingNames({ names }: { names: string }) {
+  return <SlidingText>{names}</SlidingText>
 }
 
 function SlidingSettlement({ children }: { children: ReactNode }) {
@@ -319,7 +323,19 @@ export default function App() {
       await document.fonts?.ready
       await new Promise((resolve) => requestAnimationFrame(resolve))
       const dataUrl = await toPng(resumenRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: "#ffffff" })
-      descargarImagen(dataUrl, `resumen-${persona.toLowerCase().replace(/\s+/g, "-")}.png`)
+      const nombreArchivo = `resumen-${persona.toLowerCase().replace(/\s+/g, "-")}.png`
+      const esMobile = matchMedia("(max-width: 719px)").matches
+      if (esMobile) {
+        const blob = await fetch(dataUrl).then((respuesta) => respuesta.blob())
+        const file = new File([blob], nombreArchivo, { type: "image/png" })
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ title: `Resumen de ${persona}`, files: [file] })
+        } else {
+          descargarImagen(dataUrl, nombreArchivo)
+        }
+      } else {
+        descargarImagen(dataUrl, nombreArchivo)
+      }
       toast.success("Imagen exportada.")
     } catch {
       toast.error("No se pudo exportar la imagen.")
@@ -586,8 +602,8 @@ export default function App() {
                     <button className="movement-edit" onClick={() => abrirEdicion(index, movimiento)} type="button">
                       <span className="movement-copy">
                         <span className="movement-title">
-                          <strong className="movement-name">{nombreMovimiento(movimiento)}</strong>
-                          {movimiento.tipo === "gasto" ? <span className="movement-paid-by">Pagó {movimiento.pagador}</span> : null}
+                          <SlidingText className="movement-name">{nombreMovimiento(movimiento)}</SlidingText>
+                          {movimiento.tipo === "gasto" ? <SlidingText className="movement-paid-by">Pagó {movimiento.pagador}</SlidingText> : null}
                           {movimiento.tipo === "gasto" ? <Badge className="category-badge"><CategoriaIcon categoria={movimiento.categoria} />{getCategoria(movimiento.categoria).label}</Badge> : null}
                         </span>
                         {movimiento.tipo === "gasto" ? (
@@ -595,7 +611,7 @@ export default function App() {
                             <SlidingNames names={movimiento.participantes.join(", ")} />
                           </span>
                         ) : (
-                          <span className="movement-transfer-label">{movimiento.de} pagó {formatoARS.format(movimiento.monto)} a {movimiento.a}</span>
+                          <SlidingText className="movement-transfer-label">{movimiento.de} pagó {formatoARS.format(movimiento.monto)} a {movimiento.a}</SlidingText>
                         )}
                       </span>
                     </button>
@@ -761,7 +777,7 @@ export default function App() {
                       <div className="calculations-head">
                         <div>
                           <DialogTitle>Cálculos hechos</DialogTitle>
-                          <DialogDescription>Cuentas hechas paso a paso. Se subraya a quién pagó o transfirió cada movimiento.</DialogDescription>
+                          <DialogDescription>Cuentas hechas paso a paso. Se subraya a quien pagó o transfirió cada movimiento.</DialogDescription>
                         </div>
                         <Badge>{movimientos.length} movimientos</Badge>
                       </div>
@@ -777,7 +793,7 @@ export default function App() {
                           <TableBody>
                             {matrizCalculos.map((fila) => (
                               <TableRow key={fila.paso}>
-                                <TableCell>{fila.movimiento} <strong className="calculation-movement-amount">({formatoARS.format(fila.monto)})</strong></TableCell>
+                                <TableCell><SlidingText>{fila.movimiento} <strong className="calculation-movement-amount">({formatoARS.format(fila.monto)})</strong></SlidingText></TableCell>
                                 {personas.map((persona) => {
                                   const saldo = fila.saldos[persona] ?? 0
                                   const estadoSaldo = saldo > 0 ? "amount-positive" : saldo < 0 ? "amount-negative" : "amount-zero"
@@ -811,7 +827,6 @@ export default function App() {
               {saldos.length === 0 ? <p className="empty">Agregá personas para ver saldos.</p> : null}
               {saldos.map((saldo) => {
                 const resumen = getResumenPersona(saldo.persona, movimientos)
-                const fecha = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date())
                 const estado = Math.round(resumen.saldo * 100) < 0 ? "negative" : Math.round(resumen.saldo * 100) > 0 ? "positive" : "neutral"
                 const pendiente = Math.round(resumen.saldo * 100) > 0 ? "Debe recibir" : Math.round(resumen.saldo * 100) < 0 ? "Debe pagar" : "Está al día"
 
@@ -820,7 +835,7 @@ export default function App() {
                     <DialogTrigger asChild>
                       <button className="summary-person" type="button">
                         <div className={resumen.saldo > 0 ? "avatar avatar-positive" : "avatar"}>{saldo.persona[0].toUpperCase()}</div>
-                        <strong>{saldo.persona}</strong>
+                        <SlidingText className="summary-name">{saldo.persona}</SlidingText>
                         <div className="summary-balance">
                           <span className={resumen.saldo > 0 ? "positive" : resumen.saldo < 0 ? "negative" : ""}>{formatoARS.format(resumen.saldo)}</span>
                           <small>Pendiente</small>
@@ -834,7 +849,6 @@ export default function App() {
                             <span className="receipt-avatar">{iniciales(saldo.persona)}</span>
                             <div>
                               <DialogTitle>Resumen de {saldo.persona}</DialogTitle>
-                              <DialogDescription>Generado el {fecha}</DialogDescription>
                             </div>
                             <div className="receipt-actions">
                               <Button className="btn-outline receipt-copy" onClick={() => navigator.clipboard.writeText(textoResumenPersona(resumen)).then(() => toast.success("Resumen copiado."))} type="button">
@@ -842,8 +856,10 @@ export default function App() {
                                 Copiar resumen
                               </Button>
                               <Button className="receipt-export" onClick={() => exportarResumenComoImagen(saldo.persona)} type="button">
-                                <DownloadIcon data-icon="inline-start" />
-                                Exportar imagen
+                                <DownloadIcon className="receipt-export-desktop" data-icon="inline-start" />
+                                <ShareIcon className="receipt-export-mobile" data-icon="inline-start" />
+                                <span className="receipt-export-desktop">Exportar imagen</span>
+                                <span className="receipt-export-mobile">Compartir</span>
                               </Button>
                             </div>
                           </header>
@@ -853,7 +869,7 @@ export default function App() {
                           ) : (
                             <>
                               <Card className={`receipt-result receipt-result-${estado}`}>
-                                <strong>{resultadoPersona(saldo.persona, resumen.saldo)}</strong>
+                                <SlidingText className="receipt-result-text">{resultadoPersona(saldo.persona, resumen.saldo)}</SlidingText>
                               </Card>
                               <div className="receipt-table">
                                 <div><UsersIcon data-icon="inline-start" /><span>Le tocaba gastar</span><small></small><strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></div>
@@ -869,19 +885,19 @@ export default function App() {
                                     <div className="receipt-detail-list">
                                         <section>
                                           <h3><ReceiptTextIcon data-icon="inline-start" />Gastos donde participó <strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></h3>
-                                          {resumen.gastosDondeParticipo.map(({ movimiento, montoParte }, index) => <p key={`participado-${index}`}>{nombreMovimiento(movimiento)} <span><strong>{formatoARS.format(montoParte)}</strong> de {formatoARS.format(movimiento.monto)}</span></p>)}
+                                          {resumen.gastosDondeParticipo.map(({ movimiento, montoParte }, index) => <p key={`participado-${index}`}><SlidingText>{nombreMovimiento(movimiento)}</SlidingText> <SlidingText className="receipt-detail-amount"><strong>{formatoARS.format(montoParte)}</strong> de {formatoARS.format(movimiento.monto)}</SlidingText></p>)}
                                         </section>
                                         <section>
                                           <h3><WalletCardsIcon data-icon="inline-start" />Gastos que pagó <strong>{formatoARS.format(resumen.totalPuesto)}</strong></h3>
-                                          {resumen.gastosQuePago.map((movimiento, index) => <p key={`pagado-${index}`}>{nombreMovimiento(movimiento)} <span>puso {formatoARS.format(movimiento.monto)}</span></p>)}
+                                          {resumen.gastosQuePago.map((movimiento, index) => <p key={`pagado-${index}`}><SlidingText>{nombreMovimiento(movimiento)}</SlidingText> <SlidingText className="receipt-detail-amount">puso {formatoARS.format(movimiento.monto)}</SlidingText></p>)}
                                         </section>
                                         <section>
                                           <h3><ArrowUpRightIcon data-icon="inline-start" />Pagos realizados <strong>{formatoARS.format(resumen.totalTransferido)}</strong></h3>
-                                          {resumen.transferenciasEnviadas.map((movimiento, index) => <p key={`enviada-${index}`}>Pagó a {movimiento.a} <span>{formatoARS.format(movimiento.monto)}</span></p>)}
+                                          {resumen.transferenciasEnviadas.map((movimiento, index) => <p key={`enviada-${index}`}><SlidingText>Pagó a {movimiento.a}</SlidingText> <SlidingText className="receipt-detail-amount">{formatoARS.format(movimiento.monto)}</SlidingText></p>)}
                                         </section>
                                         <section>
                                           <h3><ArrowDownLeftIcon data-icon="inline-start" />Pagos recibidos <strong>{formatoARS.format(resumen.totalRecibido)}</strong></h3>
-                                          {resumen.transferenciasRecibidas.map((movimiento, index) => <p key={`recibida-${index}`}>Recibió de {movimiento.de} <span>{formatoARS.format(movimiento.monto)}</span></p>)}
+                                          {resumen.transferenciasRecibidas.map((movimiento, index) => <p key={`recibida-${index}`}><SlidingText>Recibió de {movimiento.de}</SlidingText> <SlidingText className="receipt-detail-amount">{formatoARS.format(movimiento.monto)}</SlidingText></p>)}
                                         </section>
                                     </div>
                                   </AccordionContent>

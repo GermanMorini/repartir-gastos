@@ -699,8 +699,10 @@ h2 {
 }
 
 .movement-name {
+  flex: 1 1 auto;
   color: var(--foreground);
   font-size: 1rem;
+  font-weight: 800;
 }
 
 .movement-paid-by,
@@ -904,6 +906,11 @@ h2 {
 
 .summary-person:first-child {
   padding-top: 0;
+}
+
+.summary-name {
+  color: var(--foreground);
+  font-weight: 750;
 }
 
 .summary-balance {
@@ -1145,6 +1152,10 @@ h2 {
   min-height: 2.75rem;
 }
 
+.receipt-export-mobile {
+  display: none;
+}
+
 .receipt.is-exporting .receipt-actions {
   display: none;
 }
@@ -1163,8 +1174,10 @@ h2 {
   text-transform: uppercase;
 }
 
-.receipt-result strong {
+.receipt-result strong,
+.receipt-result-text {
   font-size: clamp(1.45rem, 5vw, 2rem);
+  font-weight: 800;
 }
 
 .receipt-result-positive {
@@ -1326,6 +1339,12 @@ h2 {
 
 .category-dialog {
   width: min(94vw, 52rem);
+}
+
+.category-dialog .dialog-close {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
 }
 
 .category-chart-card,
@@ -1557,7 +1576,7 @@ h2 {
 }
 
 .receipt-detail h3 strong,
-.receipt-detail p span {
+.receipt-detail-amount {
   justify-self: end;
   color: var(--foreground);
 }
@@ -1849,11 +1868,51 @@ h2 {
 
   .receipt-dialog {
     width: 100vw;
+    height: 100vh;
     max-height: 100vh;
+    top: 0;
+    left: 0;
+    transform: none;
   }
 
   .receipt-dialog::before {
+    position: fixed;
     border-radius: 0;
+  }
+
+  .receipt-dialog .dialog-close {
+    position: fixed;
+    top: max(0.55rem, env(safe-area-inset-top));
+    right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .category-dialog {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    top: 0;
+    left: 0;
+    transform: none;
+    padding-top: 4rem;
+  }
+
+  .category-dialog::before {
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3rem;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    content: "";
+  }
+
+  .category-dialog .dialog-close {
+    position: fixed;
+    z-index: 2;
+    top: max(0.55rem, env(safe-area-inset-top));
+    right: max(0.75rem, env(safe-area-inset-right));
   }
 
   .receipt-scroll,
@@ -1886,6 +1945,14 @@ h2 {
     flex: 1;
   }
 
+  .receipt-export-desktop {
+    display: none;
+  }
+
+  .receipt-export-mobile {
+    display: inline-flex;
+  }
+
   .receipt-table div > svg {
     width: 1.75rem;
     height: 1.75rem;
@@ -1901,7 +1968,7 @@ h2 {
   }
 
   .receipt-detail h3 strong,
-  .receipt-detail p span {
+  .receipt-detail-amount {
     justify-self: start;
   }
 
