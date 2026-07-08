@@ -6,7 +6,13 @@ const initialState: AppState = { personas: [], movimientos: [] }
 export function loadState(): AppState {
   try {
     const data = localStorage.getItem(KEY)
-    return data ? { ...initialState, ...JSON.parse(data) } : initialState
+    const state: AppState = data ? { ...initialState, ...JSON.parse(data) } : initialState
+    return {
+      ...state,
+      movimientos: state.movimientos.map((movimiento) => (
+        movimiento.tipo === "gasto" ? { ...movimiento, categoria: movimiento.categoria ?? "otros" } : movimiento
+      )),
+    }
   } catch {
     return initialState
   }

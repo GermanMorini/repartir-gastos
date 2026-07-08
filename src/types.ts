@@ -1,4 +1,5 @@
 export type Persona = string
+export type CategoriaGasto = "comida" | "bebida" | "transporte" | "salud" | "ocio" | "alojamiento" | "hogar" | "otros"
 
 export type Movimiento =
   | {
@@ -7,6 +8,7 @@ export type Movimiento =
       pagador: Persona
       monto: number
       participantes: Persona[]
+      categoria: CategoriaGasto
     }
   | {
       tipo: "transferencia"
@@ -38,6 +40,14 @@ export type FilaCalculo = {
   monto: number
   personaDestacada: Persona
   saldos: Record<Persona, number>
+}
+
+export type ResumenCategoria = {
+  categoria: CategoriaGasto
+  label: string
+  monto: number
+  cantidadGastos: number
+  porcentaje: number
 }
 
 export type AppState = {

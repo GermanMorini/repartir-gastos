@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { calcularSaldos, calcularTransferenciasPendientes, getMatrizCalculos, getResumenPersona } from "./calculos.ts"
+import { calcularSaldos, calcularTransferenciasPendientes, getGastosPorCategoria, getMatrizCalculos, getResumenPersona } from "./calculos.ts"
 import type { Movimiento } from "./types.ts"
 
 const centavos = (monto: number) => Math.round(monto * 100)
@@ -8,8 +8,20 @@ const saldoPorPersona = (saldos: ReturnType<typeof calcularSaldos>) => new Map(s
 const assertCasiCero = (monto: number, tolerancia = 1) => assert.ok(Math.abs(monto) <= tolerancia)
 
 {
+  assert.deepEqual(getGastosPorCategoria([
+    { tipo: "gasto", pagador: "Ana", monto: 100, categoria: "comida", participantes: ["Ana"] },
+    { tipo: "gasto", pagador: "Luis", monto: 50, categoria: "transporte", participantes: ["Luis"] },
+    { tipo: "gasto", pagador: "Ana", monto: 50, categoria: "comida", participantes: ["Ana", "Luis"] },
+    { tipo: "transferencia", de: "Luis", a: "Ana", monto: 200 },
+  ]), [
+    { categoria: "comida", label: "Comida", monto: 150, cantidadGastos: 2, porcentaje: 75 },
+    { categoria: "transporte", label: "Transporte", monto: 50, cantidadGastos: 1, porcentaje: 25 },
+  ])
+}
+
+{
   const movimientos: Movimiento[] = [
-    { tipo: "gasto", pagador: "Juan", monto: 9000, participantes: ["Juan", "Ana", "Luis"] },
+    { tipo: "gasto", pagador: "Juan", monto: 9000, categoria: "comida", participantes: ["Juan", "Ana", "Luis"] },
     { tipo: "transferencia", de: "Ana", a: "Juan", monto: 1000 },
   ]
 
@@ -31,7 +43,7 @@ const assertCasiCero = (monto: number, tolerancia = 1) => assert.ok(Math.abs(mon
 
 {
   const saldos = calcularSaldos(["Ana", "Juan"], [
-    { tipo: "gasto", pagador: "Juan", monto: 100, participantes: ["Ana", "Juan"] },
+    { tipo: "gasto", pagador: "Juan", monto: 100, categoria: "comida", participantes: ["Ana", "Juan"] },
     { tipo: "transferencia", de: "Ana", a: "Juan", monto: 50 },
   ])
 
@@ -49,7 +61,7 @@ const assertCasiCero = (monto: number, tolerancia = 1) => assert.ok(Math.abs(mon
 }
 
 {
-  const saldos = calcularSaldos(["A", "B", "C"], [{ tipo: "gasto", pagador: "A", monto: 100, participantes: ["A", "B", "C"] }])
+  const saldos = calcularSaldos(["A", "B", "C"], [{ tipo: "gasto", pagador: "A", monto: 100, categoria: "comida", participantes: ["A", "B", "C"] }])
   const pendientes = calcularTransferenciasPendientes(saldos)
 
   assertCasiCero(suma(saldos.map((saldo) => saldo.saldo)))
@@ -62,8 +74,8 @@ const assertCasiCero = (monto: number, tolerancia = 1) => assert.ok(Math.abs(mon
 {
   const personas = ["A", "B", "C", "D"]
   const movimientos: Movimiento[] = [
-    { tipo: "gasto", pagador: "A", monto: 10.01, participantes: personas },
-    { tipo: "gasto", pagador: "B", monto: 20.02, participantes: ["B", "C", "D"] },
+    { tipo: "gasto", pagador: "A", monto: 10.01, categoria: "comida", participantes: personas },
+    { tipo: "gasto", pagador: "B", monto: 20.02, categoria: "comida", participantes: ["B", "C", "D"] },
     { tipo: "transferencia", de: "D", a: "A", monto: 3.33 },
   ]
   const saldos = calcularSaldos(personas, movimientos)
@@ -75,8 +87,8 @@ const assertCasiCero = (monto: number, tolerancia = 1) => assert.ok(Math.abs(mon
 
 {
   const movimientos: Movimiento[] = [
-    { tipo: "gasto", pagador: "Ana", monto: 12000, participantes: ["Ana", "Luis"] },
-    { tipo: "gasto", pagador: "Luis", monto: 8000, participantes: ["Ana", "Luis"] },
+    { tipo: "gasto", pagador: "Ana", monto: 12000, categoria: "comida", participantes: ["Ana", "Luis"] },
+    { tipo: "gasto", pagador: "Luis", monto: 8000, categoria: "comida", participantes: ["Ana", "Luis"] },
     { tipo: "transferencia", de: "Ana", a: "Luis", monto: 3000 },
     { tipo: "transferencia", de: "Luis", a: "Ana", monto: 2000 },
   ]
@@ -107,7 +119,7 @@ const assertCasiCero = (monto: number, tolerancia = 1) => assert.ok(Math.abs(mon
 }
 
 {
-  const resumen = getResumenPersona("A", [{ tipo: "gasto", pagador: "A", monto: 100, participantes: ["A", "B", "C"] }])
+  const resumen = getResumenPersona("A", [{ tipo: "gasto", pagador: "A", monto: 100, categoria: "comida", participantes: ["A", "B", "C"] }])
 
   assert.equal(resumen.totalPuesto, 100)
   assert.equal(resumen.totalLeTocaba, 33.33)
@@ -117,10 +129,10 @@ const assertCasiCero = (monto: number, tolerancia = 1) => assert.ok(Math.abs(mon
 {
   const personas = ["german", "carlos", "flecha"]
   const movimientos: Movimiento[] = [
-    { tipo: "gasto", descripcion: "cena fruta + super", pagador: "german", monto: 40800, participantes: ["german", "carlos"] },
-    { tipo: "gasto", descripcion: "ubers", pagador: "german", monto: 6200, participantes: ["german", "carlos", "flecha"] },
-    { tipo: "gasto", descripcion: "cena", pagador: "carlos", monto: 98000, participantes: ["german", "carlos", "flecha"] },
-    { tipo: "gasto", descripcion: "entradas chilli", pagador: "flecha", monto: 66000, participantes: ["german", "carlos", "flecha"] },
+    { tipo: "gasto", descripcion: "cena fruta + super", pagador: "german", monto: 40800, categoria: "comida", participantes: ["german", "carlos"] },
+    { tipo: "gasto", descripcion: "ubers", pagador: "german", monto: 6200, categoria: "comida", participantes: ["german", "carlos", "flecha"] },
+    { tipo: "gasto", descripcion: "cena", pagador: "carlos", monto: 98000, categoria: "comida", participantes: ["german", "carlos", "flecha"] },
+    { tipo: "gasto", descripcion: "entradas chilli", pagador: "flecha", monto: 66000, categoria: "comida", participantes: ["german", "carlos", "flecha"] },
     { tipo: "transferencia", descripcion: "transferencia en la cena", de: "flecha", a: "carlos", monto: 40000 },
   ]
   const saldos = calcularSaldos(personas, movimientos)
@@ -159,7 +171,7 @@ const assertCasiCero = (monto: number, tolerancia = 1) => assert.ok(Math.abs(mon
     ],
   )
   assert.equal(matriz.length, movimientos.length)
-  assert.deepEqual(matriz.map((fila) => fila.personaDestacada), ["german", "german", "carlos", "flecha", "carlos"])
+  assert.deepEqual(matriz.map((fila) => fila.personaDestacada), ["german", "german", "carlos", "flecha", "flecha"])
   assert.deepEqual(matriz.map((fila) => fila.saldos), [
     { german: 20400, carlos: -20400, flecha: 0 },
     { german: 24533.33, carlos: -22466.67, flecha: -2066.67 },
@@ -181,7 +193,7 @@ for (let cantidad = 1; cantidad <= 5; cantidad += 1) {
 
   for (const pagador of personas) {
     for (let montoCentavos = 1; montoCentavos <= 100; montoCentavos += 1) {
-      const saldos = calcularSaldos(personas, [{ tipo: "gasto", pagador, monto: montoCentavos / 100, participantes: personas }])
+      const saldos = calcularSaldos(personas, [{ tipo: "gasto", pagador, monto: montoCentavos / 100, categoria: "comida", participantes: personas }])
       const pendientes = calcularTransferenciasPendientes(saldos)
       const liquidados = saldoPorPersona(saldos)
 

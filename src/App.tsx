@@ -1,11 +1,13 @@
-import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, PlusIcon, ReceiptTextIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
+import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
+import { toPng } from "html-to-image"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties, ReactNode } from "react"
 import { toast, Toaster } from "sonner"
-import { calcularSaldos, calcularTransferenciasPendientes, formatoARS, getMatrizCalculos, getResumenPersona } from "./calculos"
+import { calcularSaldos, calcularTransferenciasPendientes, formatoARS, getGastosPorCategoria, getMatrizCalculos, getResumenPersona } from "./calculos"
+import { CATEGORIAS_GASTO, CATEGORIA_DEFAULT, getCategoria } from "./categories"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, Button, Card, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui"
 import { clearState, loadState, saveState } from "./storage"
-import type { Movimiento, Persona } from "./types"
+import type { CategoriaGasto, Movimiento, Persona, ResumenCategoria } from "./types"
 
 const sinSeleccion = ""
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
@@ -57,21 +59,100 @@ function iniciales(persona: Persona) {
   return persona.split(/\s+/).filter(Boolean).slice(0, 2).map((parte) => parte[0]?.toUpperCase()).join("") || persona[0]?.toUpperCase() || "?"
 }
 
+function CategoriaIcon({ categoria }: { categoria: CategoriaGasto }) {
+  const meta = getCategoria(categoria)
+  const Icon = meta.icon
+  return <Icon data-icon="inline-start" style={{ color: meta.color }} />
+}
+
+function porcentaje(porcentaje: number) {
+  return `${Number.isInteger(porcentaje) ? porcentaje : porcentaje.toFixed(1)}%`
+}
+
+function CategoryPie({ data }: { data: ResumenCategoria[] }) {
+  const radio = 72
+  const circunferencia = 2 * Math.PI * radio
+  let acumulado = 0
+
+  if (data.length === 0) return <div className="category-pie-empty">Sin gastos</div>
+
+  return (
+    <svg className="category-pie" viewBox="0 0 180 180" role="img" aria-label="Gastos por categoría">
+      <circle cx="90" cy="90" fill="none" r={radio} stroke="#edf1f4" strokeWidth="28" />
+      {data.map((item) => {
+        const largo = circunferencia * item.porcentaje / 100
+        const segmento = (
+          <circle
+            cx="90"
+            cy="90"
+            fill="none"
+            key={item.categoria}
+            r={radio}
+            stroke={getCategoria(item.categoria).color}
+            strokeDasharray={`${largo} ${circunferencia}`}
+            strokeDashoffset={-acumulado}
+            strokeLinecap="round"
+            strokeWidth="28"
+            transform="rotate(-90 90 90)"
+          />
+        )
+        acumulado += largo
+        return segmento
+      })}
+      <text dominantBaseline="middle" textAnchor="middle" x="90" y="84">Total</text>
+      <text dominantBaseline="middle" textAnchor="middle" x="90" y="104">{formatoARS.format(data.reduce((total, item) => total + item.monto, 0))}</text>
+    </svg>
+  )
+}
+
+function CategoryChartShareCard({ data, total, fecha }: { data: ResumenCategoria[]; total: number; fecha: string }) {
+  return (
+    <Card className="category-share-card">
+      <header>
+        <div>
+          <h2>Gastos por categoría</h2>
+          <p>Generado el {fecha}</p>
+        </div>
+        <strong>{formatoARS.format(total)}</strong>
+      </header>
+      <div className="category-chart-layout">
+        <CategoryPie data={data} />
+        <div className="category-detail-list">
+          {data.length === 0 ? <p className="empty">Todavía no hay gastos para graficar.</p> : null}
+          {data.map((item) => (
+            <div className="category-detail-row" key={item.categoria}>
+              <Badge className="category-badge"><CategoriaIcon categoria={item.categoria} />{item.label}</Badge>
+              <strong>{formatoARS.format(item.monto)}</strong>
+              <span>{porcentaje(item.porcentaje)}</span>
+              <small>{item.cantidadGastos} {item.cantidadGastos === 1 ? "gasto" : "gastos"}</small>
+            </div>
+          ))}
+        </div>
+      </div>
+      <footer>Montos expresados en $ ARS</footer>
+    </Card>
+  )
+}
+
 export default function App() {
   const [personas, setPersonas] = useState<Persona[]>(() => loadState().personas)
   const [movimientos, setMovimientos] = useState<Movimiento[]>(() => loadState().movimientos)
   const [nombre, setNombre] = useState("")
-  const [gasto, setGasto] = useState({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [] as Persona[] })
+  const [gasto, setGasto] = useState({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [] as Persona[], categoria: CATEGORIA_DEFAULT })
   const [transferencia, setTransferencia] = useState({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
+  const exportCategoriasRef = useRef<HTMLDivElement | null>(null)
+  const calculosRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => saveState({ personas, movimientos }), [personas, movimientos])
 
   const saldos = useMemo(() => calcularSaldos(personas, movimientos), [personas, movimientos])
   const matrizCalculos = useMemo(() => getMatrizCalculos(personas, movimientos), [personas, movimientos])
+  const gastosPorCategoria = useMemo(() => getGastosPorCategoria(movimientos), [movimientos])
   const pendientes = useMemo(() => calcularTransferenciasPendientes(saldos), [saldos])
   const totalGastado = saldos.reduce((total, saldo) => total + saldo.totalPagadoEnGastos, 0)
   const promedio = personas.length ? totalGastado / personas.length : 0
+  const fechaCategorias = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date())
   const firmaResumen = "💲 Resumen hecho con https://germanmorini.github.io/repartir-gastos/"
   const resumenCopiable = pendientes.length
     ? `Reparto final:\n${pendientes.map((t) => `- ${t.de} transfiere ${formatoARS.format(t.monto)} a ${t.a}`).join("\n")}\n\n${firmaResumen}`
@@ -101,8 +182,8 @@ export default function App() {
     if (!gasto.pagador) return toast.error("Elegí quién pagó.")
     if (!Number.isFinite(monto) || monto <= 0) return toast.error("El monto debe ser positivo.")
     if (gasto.participantes.length === 0) return toast.error("Elegí al menos un participante.")
-    setMovimientos([...movimientos, { tipo: "gasto", descripcion: gasto.descripcion.trim(), pagador: gasto.pagador, monto, participantes: gasto.participantes }])
-    setGasto({ descripcion: "", pagador: gasto.pagador, monto: "", participantes: personas })
+    setMovimientos([...movimientos, { tipo: "gasto", descripcion: gasto.descripcion.trim(), pagador: gasto.pagador, monto, participantes: gasto.participantes, categoria: gasto.categoria }])
+    setGasto({ descripcion: "", pagador: gasto.pagador, monto: "", participantes: personas, categoria: gasto.categoria })
   }
 
   function agregarTransferencia() {
@@ -118,7 +199,7 @@ export default function App() {
     clearState()
     setPersonas([])
     setMovimientos([])
-    setGasto({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [] })
+    setGasto({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [], categoria: CATEGORIA_DEFAULT })
     setTransferencia({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   }
 
@@ -165,6 +246,68 @@ export default function App() {
     ].join("\n")
   }
 
+  function textoCategorias() {
+    return [
+      "Gastos por categoría:",
+      `Total: ${formatoARS.format(totalGastado)}`,
+      "",
+      ...gastosPorCategoria.map((item) => `- ${item.label}: ${formatoARS.format(item.monto)} (${porcentaje(item.porcentaje)}, ${item.cantidadGastos} ${item.cantidadGastos === 1 ? "gasto" : "gastos"})`),
+    ].join("\n")
+  }
+
+  function descargarImagen(dataUrl: string, nombreArchivo = "gastos-por-categoria.png") {
+    const link = document.createElement("a")
+    link.href = dataUrl
+    link.download = nombreArchivo
+    link.click()
+  }
+
+  async function exportarGraficoComoImagen() {
+    if (!exportCategoriasRef.current) return
+    try {
+      await document.fonts?.ready
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      const dataUrl = await toPng(exportCategoriasRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: "#ffffff" })
+      const blob = await fetch(dataUrl).then((respuesta) => respuesta.blob())
+      const file = new File([blob], "gastos-por-categoria.png", { type: "image/png" })
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: "Gastos por categoría", text: "Resumen de gastos por categoría", files: [file] })
+      } else {
+        descargarImagen(dataUrl)
+      }
+      toast.success("Imagen exportada.")
+    } catch {
+      toast.error("No se pudo exportar la imagen.")
+    }
+  }
+
+  function textoMatrizCalculos() {
+    return [
+      ["Movimiento", ...personas].join("\t"),
+      ...matrizCalculos.map((fila) => [
+        `${fila.movimiento} (${formatoARS.format(fila.monto)})`,
+        ...personas.map((persona) => formatoSaldoMatriz(fila.saldos[persona] ?? 0)),
+      ].join("\t")),
+    ].join("\n")
+  }
+
+  async function exportarCalculosComoImagen() {
+    if (!calculosRef.current) return
+    try {
+      calculosRef.current.classList.add("is-exporting")
+      await document.fonts?.ready
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      const dataUrl = await toPng(calculosRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: "#ffffff" })
+      descargarImagen(dataUrl, "matriz-de-calculos.png")
+      toast.success("Imagen exportada.")
+    } catch {
+      toast.error("No se pudo exportar la imagen.")
+    } finally {
+      calculosRef.current?.classList.remove("is-exporting")
+    }
+  }
+
   function abrirEdicion(index: number, movimiento: Movimiento) {
     setEdicion({
       index,
@@ -205,6 +348,11 @@ export default function App() {
   return (
     <main className="app-bg">
       <Toaster richColors position="top-center" />
+      <div className="export-offscreen">
+        <div ref={exportCategoriasRef}>
+          <CategoryChartShareCard data={gastosPorCategoria} fecha={fechaCategorias} total={totalGastado} />
+        </div>
+      </div>
       <div className="app-grid">
         <div className="app-panel">
           <header className="app-header">
@@ -339,10 +487,27 @@ export default function App() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </label>
-                <Button className="add-movement" onClick={agregarGasto} type="button">
-                  <PlusIcon data-icon="inline-start" />
-                  Añadir gasto
-                </Button>
+                <div className="add-expense-row">
+                  <Select value={gasto.categoria} onValueChange={(categoria) => setGasto({ ...gasto, categoria: categoria as CategoriaGasto })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {CATEGORIAS_GASTO.map((categoria) => (
+                          <SelectItem key={categoria.key} value={categoria.key}>
+                            <CategoriaIcon categoria={categoria.key} />
+                            {categoria.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <Button className="add-movement" onClick={agregarGasto} type="button">
+                    <PlusIcon data-icon="inline-start" />
+                    Añadir gasto
+                  </Button>
+                </div>
               </TabsContent>
               <TabsContent className="form-body" value="transferencia">
                 <p className="tab-hint">Registrá un pago realizado.</p>
@@ -396,19 +561,22 @@ export default function App() {
                   <div className="movement-row" key={`${movimiento.tipo}-${index}`}>
                     <button className="movement-edit" onClick={() => abrirEdicion(index, movimiento)} type="button">
                       <span className="movement-copy">
-                        <strong>{nombreMovimiento(movimiento)}</strong>
+                        <span className="movement-title">
+                          <strong className="movement-name">{nombreMovimiento(movimiento)}</strong>
+                          {movimiento.tipo === "gasto" ? <span className="movement-paid-by">Pagó {movimiento.pagador}</span> : null}
+                          {movimiento.tipo === "gasto" ? <Badge className="category-badge"><CategoriaIcon categoria={movimiento.categoria} />{getCategoria(movimiento.categoria).label}</Badge> : null}
+                        </span>
                         {movimiento.tipo === "gasto" ? (
-                          <span className="movement-label">
-                            Pagó {movimiento.pagador} <span aria-hidden="true">•</span>
+                          <span className="movement-participants">
                             <SlidingNames names={movimiento.participantes.join(", ")} />
                           </span>
                         ) : (
-                          <span>{movimiento.de} pagó {formatoARS.format(movimiento.monto)} a {movimiento.a}</span>
+                          <span className="movement-transfer-label">{movimiento.de} pagó {formatoARS.format(movimiento.monto)} a {movimiento.a}</span>
                         )}
                       </span>
                     </button>
-                    <strong className="movement-amount">{formatoARS.format(movimiento.monto)}</strong>
-                    <button aria-label="Eliminar movimiento" onClick={() => setMovimientos(movimientos.filter((_, item) => item !== index))} type="button">
+                    <strong className={`movement-amount ${movimiento.tipo === "transferencia" ? "movement-amount-transfer" : ""}`}>{formatoARS.format(movimiento.monto)}</strong>
+                    <button aria-label="Eliminar movimiento" className="movement-delete" onClick={() => setMovimientos(movimientos.filter((_, item) => item !== index))} type="button">
                       <Trash2Icon />
                     </button>
                   </div>
@@ -420,67 +588,103 @@ export default function App() {
                 <DialogTitle>Editar movimiento</DialogTitle>
                 <DialogDescription>Cambia los datos de este movimiento</DialogDescription>
                 <form className="edit-form" onSubmit={(event) => { event.preventDefault(); aceptarEdicion() }}>
-                  <Input autoFocus placeholder="Nombre" value={edicion?.movimiento.descripcion ?? ""} onChange={(event) => setEdicion(edicion ? { ...edicion, movimiento: { ...edicion.movimiento, descripcion: event.target.value } } : null)} />
-                  <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={edicion?.monto ?? ""} onChange={(event) => setEdicion(edicion ? { ...edicion, monto: event.target.value } : null)} />
+                  <label className="edit-field">
+                    <span>Nombre</span>
+                    <Input autoFocus placeholder="Nombre" value={edicion?.movimiento.descripcion ?? ""} onChange={(event) => setEdicion(edicion ? { ...edicion, movimiento: { ...edicion.movimiento, descripcion: event.target.value } } : null)} />
+                  </label>
+                  <label className="edit-field">
+                    <span>Total</span>
+                    <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={edicion?.monto ?? ""} onChange={(event) => setEdicion(edicion ? { ...edicion, monto: event.target.value } : null)} />
+                  </label>
                   {edicion?.movimiento.tipo === "gasto" ? (
                     <>
-                      <Select value={edicion.movimiento.pagador} onValueChange={(pagador) => editarGasto({ pagador })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Quién pagó" />
-                        </SelectTrigger>
-                        <SelectContent className="edit-select-content">
-                          <SelectGroup>
-                            {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button className="select-like" type="button">
-                            {edicion.movimiento.participantes.length === personas.length ? "Todos los seleccionados" : `${edicion.movimiento.participantes.length} seleccionados`}
-                            <ChevronDownIcon data-icon="inline-end" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="participants-menu edit-participants-menu">
-                          <DropdownMenuLabel>Participantes</DropdownMenuLabel>
-                          <DropdownMenuSeparator className="dropdown-separator" />
-                          <DropdownMenuGroup>
-                            {personas.map((persona) => (
-                              <DropdownMenuCheckboxItem
-                                checked={edicion.movimiento.tipo === "gasto" && edicion.movimiento.participantes.includes(persona)}
-                                key={persona}
-                                onCheckedChange={(checked) => editarParticipante(persona, checked)}
-                              >
-                                {persona}
-                              </DropdownMenuCheckboxItem>
-                            ))}
-                          </DropdownMenuGroup>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="edit-field">
+                        <span>Pagó</span>
+                        <Select value={edicion.movimiento.pagador} onValueChange={(pagador) => editarGasto({ pagador })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Quién pagó" />
+                          </SelectTrigger>
+                          <SelectContent className="edit-select-content">
+                            <SelectGroup>
+                              {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="edit-field">
+                        <span>Categoría</span>
+                        <Select value={edicion.movimiento.categoria} onValueChange={(categoria) => editarGasto({ categoria: categoria as CategoriaGasto })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Categoría" />
+                          </SelectTrigger>
+                          <SelectContent className="edit-select-content">
+                            <SelectGroup>
+                              {CATEGORIAS_GASTO.map((categoria) => (
+                                <SelectItem key={categoria.key} value={categoria.key}>
+                                  <CategoriaIcon categoria={categoria.key} />
+                                  {categoria.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="edit-field">
+                        <span>Participantes</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button className="select-like" type="button">
+                              {edicion.movimiento.participantes.length === personas.length ? "Todos los seleccionados" : `${edicion.movimiento.participantes.length} seleccionados`}
+                              <ChevronDownIcon data-icon="inline-end" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="participants-menu edit-participants-menu">
+                            <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="dropdown-separator" />
+                            <DropdownMenuGroup>
+                              {personas.map((persona) => (
+                                <DropdownMenuCheckboxItem
+                                  checked={edicion.movimiento.tipo === "gasto" && edicion.movimiento.participantes.includes(persona)}
+                                  key={persona}
+                                  onCheckedChange={(checked) => editarParticipante(persona, checked)}
+                                >
+                                  {persona}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </>
                   ) : null}
                   {edicion?.movimiento.tipo === "transferencia" ? (
                     <>
-                      <Select value={edicion.movimiento.de} onValueChange={(de) => editarTransferencia({ de })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Origen" />
-                        </SelectTrigger>
-                        <SelectContent className="edit-select-content">
-                          <SelectGroup>
-                            {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      <Select value={edicion.movimiento.a} onValueChange={(a) => editarTransferencia({ a })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Destino" />
-                        </SelectTrigger>
-                        <SelectContent className="edit-select-content">
-                          <SelectGroup>
-                            {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                      <div className="edit-field">
+                        <span>Origen</span>
+                        <Select value={edicion.movimiento.de} onValueChange={(de) => editarTransferencia({ de })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Origen" />
+                          </SelectTrigger>
+                          <SelectContent className="edit-select-content">
+                            <SelectGroup>
+                              {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="edit-field">
+                        <span>Destino</span>
+                        <Select value={edicion.movimiento.a} onValueChange={(a) => editarTransferencia({ a })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Destino" />
+                          </SelectTrigger>
+                          <SelectContent className="edit-select-content">
+                            <SelectGroup>
+                              {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </>
                   ) : null}
                   <div className="dialog-actions">
@@ -500,48 +704,60 @@ export default function App() {
           <Card className="summary-card">
             <div className="summary-head">
               <h2>Resumen por persona</h2>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="btn-outline" type="button">
-                    <CalculatorIcon data-icon="inline-start" />
-                    Cálculos
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="calculations-dialog">
-                  <Card className="calculations-card">
-                    <div className="calculations-head">
-                      <div>
-                        <DialogTitle>Cálculos hechos</DialogTitle>
-                        <DialogDescription>Cuentas hechas paso a paso. Se subraya a quién hay que pagarle de cada movimiento.</DialogDescription>
+              <div className="summary-actions">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="btn-outline" type="button">
+                      <CalculatorIcon data-icon="inline-start" />
+                      Cálculos
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="calculations-dialog">
+                    <Card className="calculations-card" ref={calculosRef}>
+                      <div className="calculations-head">
+                        <div>
+                          <DialogTitle>Cálculos hechos</DialogTitle>
+                          <DialogDescription>Cuentas hechas paso a paso. Se subraya a quién pagó o transfirió cada movimiento.</DialogDescription>
+                        </div>
+                        <Badge>{movimientos.length} movimientos</Badge>
                       </div>
-                      <Badge>{movimientos.length} movimientos</Badge>
-                    </div>
-                    <Separator />
-                    <ScrollArea className="calculations-scroll">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Movimiento</TableHead>
-                            {personas.map((persona) => <TableHead className="number" key={persona}>{persona}</TableHead>)}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {matrizCalculos.map((fila) => (
-                            <TableRow key={fila.paso}>
-                              <TableCell>{fila.movimiento} <strong className="calculation-movement-amount">({formatoARS.format(fila.monto)})</strong></TableCell>
-                              {personas.map((persona) => {
-                                const saldo = fila.saldos[persona] ?? 0
-                                const estadoSaldo = saldo > 0 ? "amount-positive" : saldo < 0 ? "amount-negative" : "amount-zero"
-                                return <TableCell className={`number ${estadoSaldo}${persona === fila.personaDestacada ? " amount-highlight" : ""}`} key={persona}>{formatoSaldoMatriz(saldo)}</TableCell>
-                              })}
+                      <Separator />
+                      <ScrollArea className="calculations-scroll">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Movimiento</TableHead>
+                              {personas.map((persona) => <TableHead className="number" key={persona}>{persona}</TableHead>)}
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </ScrollArea>
-                  </Card>
-                </DialogContent>
-              </Dialog>
+                          </TableHeader>
+                          <TableBody>
+                            {matrizCalculos.map((fila) => (
+                              <TableRow key={fila.paso}>
+                                <TableCell>{fila.movimiento} <strong className="calculation-movement-amount">({formatoARS.format(fila.monto)})</strong></TableCell>
+                                {personas.map((persona) => {
+                                  const saldo = fila.saldos[persona] ?? 0
+                                  const estadoSaldo = saldo > 0 ? "amount-positive" : saldo < 0 ? "amount-negative" : "amount-zero"
+                                  return <TableCell className={`number ${estadoSaldo}${persona === fila.personaDestacada ? " amount-highlight" : ""}`} key={persona}>{formatoSaldoMatriz(saldo)}</TableCell>
+                                })}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    </Card>
+                    <div className="dialog-actions">
+                      <Button className="btn-outline" onClick={() => navigator.clipboard.writeText(textoMatrizCalculos()).then(() => toast.success("Contenido copiado."))} type="button">
+                        <CopyIcon data-icon="inline-start" />
+                        Copiar contenido
+                      </Button>
+                      <Button onClick={exportarCalculosComoImagen} type="button">
+                        <DownloadIcon data-icon="inline-start" />
+                        Exportar imagen
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
             <div className="summary-list">
               {saldos.length === 0 ? <p className="empty">Agregá personas para ver saldos.</p> : null}
@@ -627,7 +843,49 @@ export default function App() {
           </Card>
 
           <Card className="totals-card">
-            <h2>Totales</h2>
+            <div className="totals-head">
+              <h2>Totales</h2>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="btn-chart" type="button">
+                    <PieChartIcon data-icon="inline-start" />
+                    Gráfico
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="category-dialog">
+                  <DialogTitle>Gastos por categoría</DialogTitle>
+                  <DialogDescription>Compará cuánto se gastó en cada categoría.</DialogDescription>
+                  <Card className="category-chart-card">
+                    <div className="category-chart-layout">
+                      <CategoryPie data={gastosPorCategoria} />
+                      <div className="category-detail-list">
+                        {gastosPorCategoria.length === 0 ? <p className="empty">Todavía no hay gastos para graficar.</p> : null}
+                        {gastosPorCategoria.map((item) => (
+                          <div className="category-detail-row" key={item.categoria}>
+                            <Badge className="category-badge"><CategoriaIcon categoria={item.categoria} />{item.label}</Badge>
+                            <strong>{formatoARS.format(item.monto)}</strong>
+                            <span>{porcentaje(item.porcentaje)}</span>
+                            <small>{item.cantidadGastos} {item.cantidadGastos === 1 ? "gasto" : "gastos"}</small>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Separator />
+                    <div className="category-total"><span>Total gastado</span><strong>{formatoARS.format(totalGastado)}</strong></div>
+                  </Card>
+                  <div className="dialog-actions">
+                    <Button className="btn-outline" onClick={() => navigator.clipboard.writeText(textoCategorias()).then(() => toast.success("Resumen copiado."))} type="button">
+                      <CopyIcon data-icon="inline-start" />
+                      Copiar resumen
+                    </Button>
+                    <Button onClick={exportarGraficoComoImagen} type="button">
+                      <DownloadIcon data-icon="inline-start" />
+                      Exportar imagen
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
             <div className="totals-grid">
               <div>
                 <span>Total gastado</span>

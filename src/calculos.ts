@@ -1,5 +1,6 @@
 import Decimal from "decimal.js"
-import type { FilaCalculo, Movimiento, Persona, SaldoPersona, TransferenciaPendiente } from "./types"
+import { getCategoria } from "./categories.ts"
+import type { FilaCalculo, Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "./types"
 
 type SaldoInterno = Omit<SaldoPersona, "saldo" | "totalPagadoEnGastos" | "totalDebidoEnGastos" | "totalTransferido" | "totalRecibido" | "totalSalioBolsillo"> & {
   saldo: Decimal
@@ -138,10 +139,35 @@ export function getMatrizCalculos(personas: Persona[], movimientos: Movimiento[]
       (persona) => saldos.has(persona),
       (persona, monto) => saldos.set(persona, (saldos.get(persona) ?? decimal(0)).plus(monto)),
     )
-    filas.push(fila(index + 1, textoMovimientoCalculo(movimiento), movimiento.monto, movimiento.tipo === "gasto" ? movimiento.pagador : movimiento.a))
+    filas.push(fila(index + 1, textoMovimientoCalculo(movimiento), movimiento.monto, movimiento.tipo === "gasto" ? movimiento.pagador : movimiento.de))
   })
 
   return filas
+}
+
+export function getGastosPorCategoria(movimientos: Movimiento[]): ResumenCategoria[] {
+  const grupos = new Map<string, { monto: Decimal; cantidadGastos: number }>()
+
+  for (const movimiento of movimientos) {
+    if (movimiento.tipo !== "gasto") continue
+    const actual = grupos.get(movimiento.categoria) ?? { monto: decimal(0), cantidadGastos: 0 }
+    grupos.set(movimiento.categoria, { monto: actual.monto.plus(movimiento.monto), cantidadGastos: actual.cantidadGastos + 1 })
+  }
+
+  const total = [...grupos.values()].reduce((acc, item) => acc.plus(item.monto), decimal(0))
+
+  return [...grupos.entries()]
+    .map(([categoria, item]) => {
+      const meta = getCategoria(categoria as ResumenCategoria["categoria"])
+      return {
+        categoria: meta.key,
+        label: meta.label,
+        monto: redondearMoneda(item.monto),
+        cantidadGastos: item.cantidadGastos,
+        porcentaje: total.isZero() ? 0 : redondearMoneda(item.monto.mul(100).div(total)),
+      }
+    })
+    .sort((a, b) => b.monto - a.monto)
 }
 
 export function getResumenPersona(persona: Persona, movimientos: Movimiento[]) {
