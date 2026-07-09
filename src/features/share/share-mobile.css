@@ -3,4 +3,10 @@
     height: 100dvh;
     overflow: hidden;
   }
+
+  .share-page .ps-mobile-page {
+    background:
+      linear-gradient(rgb(248 250 252 / 0.14), rgb(248 250 252 / 0.14)),
+      url("/fondo.png") center / cover no-repeat;
+  }
 }

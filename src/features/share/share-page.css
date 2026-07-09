@@ -1,7 +1,15 @@
 .share-page {
+  position: relative;
   min-height: 100dvh;
-  background: #f8fafc;
+  background:
+    linear-gradient(rgb(248 250 252 / 0.12), rgb(248 250 252 / 0.12)),
+    url("/fondo.png") center / cover no-repeat;
   color: var(--foreground);
+}
+
+.share-page > * {
+  position: relative;
+  z-index: 1;
 }
 
 .share-error {

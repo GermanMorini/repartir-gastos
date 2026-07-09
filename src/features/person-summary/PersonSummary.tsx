@@ -1,7 +1,8 @@
-import { ArrowDownLeftIcon, ArrowLeftIcon, ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, ReceiptTextIcon, ShareIcon, WalletCardsIcon } from "lucide-react"
+import { ArrowDownLeftIcon, ArrowLeftIcon, ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, ReceiptTextIcon, ShareIcon, UsersIcon, WalletCardsIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { CategoryBadge } from "../../components/shared/CategoryBadge"
+import { SlidingText } from "../../components/shared/SlidingText"
 import { Avatar, AvatarFallback, Badge, Button, Card, Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, ScrollArea, Separator, Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui"
 import type { CarouselApi } from "../../components/ui"
 import { getResumenPersona } from "../../lib/calculos"
@@ -154,10 +155,12 @@ function DetailList({ resumen, view, onBack }: { resumen: ResumenPersona; view: 
       {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ChevronLeftIcon />Volver</Button> : null}
       <header><strong>{title}</strong><small>{subtitle}</small><b>{formatoARS.format(amount)}</b></header>
       <Separator />
-      <div>
-        <DetailRows resumen={resumen} view={view} />
-        {!resumen.tieneMovimientos ? <p className="empty">{resumen.persona} todavía no tiene movimientos.</p> : null}
-      </div>
+      <ScrollArea className="ps-detail-scroll">
+        <div>
+          <DetailRows resumen={resumen} view={view} />
+          {!resumen.tieneMovimientos ? <p className="empty">{resumen.persona} todavía no tiene movimientos.</p> : null}
+        </div>
+      </ScrollArea>
     </Card>
   )
 }
@@ -207,18 +210,21 @@ export function PersonSummaryDesktopView({ personas, movimientos, initialPersona
     <div className="ps-desktop-view">
       <header className="ps-desktop-head">
         {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ChevronLeftIcon />Volver al listado</Button> : null}
-        <h2>Resumen por persona</h2>
-        <p>Revisá cuánto debe pagar o recibir cada persona.</p>
+        {readOnly ? <span className="ps-share-logo"><UsersIcon /></span> : null}
+        <div>
+          <h2>Resumen por persona</h2>
+          <p>Revisá cuánto debe pagar o recibir cada persona.</p>
+        </div>
       </header>
       {readOnly ? <PersonCarousel personas={personas} selected={selected} onSelect={(persona) => { setSelected(persona); setDetail("cards") }} /> : null}
       <div className="ps-desktop-detail">
         <aside>
-          <PersonAvatar className="ps-big-avatar" persona={resumen.persona} />
-          <h3>{resumen.persona}</h3>
+          <SlidingText className="ps-side-name">{resumen.persona}</SlidingText>
           <Badge className={estado.className}>{estado.label}</Badge>
           <Separator />
-          <span className="ps-side-stat">Parte<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></span>
+          <span className="ps-side-stat">Le tocaba gastar<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></span>
           <span className="ps-side-stat">Gastó<strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></span>
+          <span className="ps-side-stat">Ya recibió<strong>{formatoARS.format(resumen.totalRecibido)}</strong></span>
           <span className="ps-side-stat">Saldo<strong className={estado.className}>{formatoARS.format(resumen.saldo)}</strong></span>
         </aside>
         <section>

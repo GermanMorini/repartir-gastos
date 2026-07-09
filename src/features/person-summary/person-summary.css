@@ -83,9 +83,24 @@
 }
 
 .person-carousel-arrow {
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  min-width: 3.25rem;
+  min-height: 3.25rem;
+  background: #6d28d9;
+  border-color: #6d28d9;
+  color: #fff;
   padding: 0;
+}
+
+.person-carousel-arrow:disabled {
+  border-color: #d8b4fe;
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.person-carousel-arrow svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  stroke-width: 3;
 }
 
 .person-pill.is-active,
@@ -199,6 +214,14 @@
   margin: 1rem 1rem 0;
 }
 
+.ps-detail-scroll {
+  max-height: 21rem;
+}
+
+.ps-detail-scroll .scroll-area-viewport {
+  max-height: 21rem;
+}
+
 .positive {
   color: var(--primary) !important;
 }
@@ -218,6 +241,7 @@
 
   .ps-desktop-view {
     display: flex;
+    height: 100%;
     min-height: 0;
     flex: 1;
     flex-direction: column;
@@ -230,6 +254,9 @@
   }
 
   .ps-desktop-head {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr) 12rem;
+    align-items: center;
     text-align: center;
   }
 
@@ -245,7 +272,31 @@
   }
 
   .ps-desktop-head .btn {
-    float: left;
+    justify-self: start;
+  }
+
+  .ps-share-logo {
+    display: inline-grid;
+    width: 4.5rem;
+    height: 4.5rem;
+    place-items: center;
+    justify-self: end;
+    border-radius: 18px;
+    background: #6d28d9;
+    color: #fff;
+  }
+
+  .ps-share-logo svg {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
+  .ps-desktop-head > div {
+    grid-column: 2;
+  }
+
+  .ps-desktop-head > .btn + div {
+    grid-column: 2;
   }
 
   .ps-desktop-people {
@@ -275,6 +326,7 @@
 
   .ps-desktop-detail {
     display: grid;
+    flex: 1;
     min-height: 26rem;
     grid-template-columns: 20rem minmax(0, 1fr);
     border: 1px solid var(--border);
@@ -285,8 +337,8 @@
   .ps-desktop-detail aside {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 0.8rem;
+    align-items: stretch;
+    gap: 0.75rem;
     border-right: 1px solid var(--border);
     padding: 1.6rem;
   }
@@ -303,16 +355,18 @@
     line-height: 1;
   }
 
-  .ps-desktop-detail aside > h3 {
-    margin: 0;
+  .ps-side-name {
+    display: block;
+    width: 100%;
     color: #101828;
-    font-size: 1.85rem;
-    font-weight: 900;
+    font-size: 2.35rem;
+    font-weight: 950;
     line-height: 1.2;
-    text-align: center;
+    text-align: left;
   }
 
   .ps-desktop-detail aside > .badge {
+    align-self: flex-start;
     background: rgb(0 122 53 / 0.12);
     color: var(--primary);
   }
@@ -329,8 +383,10 @@
 
   .ps-desktop-detail aside .ps-side-stat {
     display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
     width: 100%;
-    gap: 0.25rem;
+    gap: 0.75rem;
     border-top: 1px solid var(--border);
     padding-top: 0.75rem;
     color: #536078;
@@ -339,25 +395,95 @@
 
   .ps-desktop-detail aside .ps-side-stat strong {
     color: #101828;
-    font-size: 1.75rem;
+    font-size: 1.25rem;
+    text-align: right;
+    white-space: nowrap;
   }
 
   .ps-desktop-detail section {
+    min-height: 0;
     padding: 1.4rem;
   }
 
   .ps-big-avatar {
-    width: 6.25rem;
-    height: 6.25rem;
-    font-size: 2.4rem;
+    width: 9rem;
+    height: 9rem;
+    font-size: 3.7rem;
   }
 
   .ps-desktop-detail .ps-card-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .ps-desktop-view .person-carousel-item {
+    flex-basis: 33.333%;
+    padding-inline: 0.4rem;
+  }
+
   .ps-desktop-detail .ps-detail-button {
-    min-height: 5.25rem;
+    min-height: 8.5rem;
+    grid-template-columns: 4rem minmax(0, 1fr) 1.5rem;
+    align-content: center;
+    gap: 0.45rem 1rem;
+    padding: 1.15rem;
+  }
+
+  .ps-desktop-detail .ps-detail-button .ps-detail-icon {
+    display: grid;
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    align-self: center;
+    width: 3.75rem;
+    height: 3.75rem;
+  }
+
+  .ps-desktop-detail .ps-detail-button .ps-detail-icon svg {
+    width: 2rem;
+    height: 2rem;
+    stroke-width: 2.6;
+  }
+
+  .ps-desktop-detail .ps-detail-button:nth-child(1) .ps-detail-icon {
+    background: #dcfce7;
+    color: #008f45;
+  }
+
+  .ps-desktop-detail .ps-detail-button:nth-child(2) .ps-detail-icon {
+    background: #fff4d6;
+    color: #f59e0b;
+  }
+
+  .ps-desktop-detail .ps-detail-button:nth-child(3) .ps-detail-icon {
+    background: #ede9fe;
+    color: #7c3aed;
+  }
+
+  .ps-desktop-detail .ps-detail-button:nth-child(4) .ps-detail-icon {
+    background: #dbeafe;
+    color: #2563eb;
+  }
+
+  .ps-desktop-detail .ps-detail-button > span:not(.ps-detail-icon),
+  .ps-desktop-detail .ps-detail-button > b {
+    grid-column: 2;
+  }
+
+  .ps-desktop-detail .ps-detail-button > svg {
+    grid-column: 3;
+    grid-row: 1 / span 3;
+    align-self: center;
+  }
+
+  .ps-desktop-detail .ps-detail-button strong {
+    font-size: 1.35rem;
+  }
+
+  .ps-desktop-detail .ps-detail-button small {
+    font-style: italic;
+  }
+
+  .ps-desktop-detail .ps-detail-button b {
+    font-size: 1.55rem;
   }
 
   .ps-desktop-detail .ps-detail-list header,

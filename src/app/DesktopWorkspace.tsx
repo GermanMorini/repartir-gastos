@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, ChevronRightIcon, CopyIcon, PieChartIcon, SearchIcon, SettingsIcon, ShareIcon, UsersIcon } from "lucide-react"
+import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, EraserIcon, PieChartIcon, SearchIcon, SettingsIcon, ShareIcon, UsersIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { ConfirmDialog } from "../components/shared/ConfirmDialog"
@@ -6,9 +6,10 @@ import { CategoriaIcon, CategoryBadge } from "../components/shared/CategoryBadge
 import { PersonSummaryDesktopView } from "../features/person-summary/PersonSummary"
 import { PersonaForm } from "../sections/personas/PersonaForm"
 import { PersonaItem } from "../sections/personas/PersonaItem"
+import { SlidingText } from "../components/shared/SlidingText"
 import { CategoryDetailList, CategoryPie } from "../sections/total/CategoryChart"
 import { RepartirDialog } from "../sections/total/RepartirDialog"
-import { CATEGORIAS_GASTO, getCategoriaOrden } from "../lib/categorias"
+import { CATEGORIAS_GASTO } from "../lib/categorias"
 import { formatoARS } from "../lib/money"
 import type { Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "../types"
 import { Badge, Button, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
@@ -40,11 +41,8 @@ type DesktopWorkspaceProps = {
   transferenciaForm: ReactNode
 }
 
-const pageSize = 8
-
-function iniciales(persona: Persona) {
-  return persona.split(/\s+/).filter(Boolean).slice(0, 2).map((parte) => parte[0]?.toUpperCase()).join("") || persona[0]?.toUpperCase() || "?"
-}
+const summaryPageSize = 6
+const movementPageSize = 8
 
 function estadoSaldo(saldo: number) {
   const centavos = Math.round(saldo * 100)
@@ -56,9 +54,9 @@ function estadoSaldo(saldo: number) {
 function Pagination({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (page: number) => void }) {
   return (
     <div className="desktop-pagination">
-      <Button className="btn-outline" disabled={page <= 1} onClick={() => onPage(page - 1)} type="button">←</Button>
+      <Button className="btn-outline" disabled={page <= 1} onClick={() => onPage(page - 1)} type="button"><ChevronLeftIcon /></Button>
       <span>{page} de {totalPages}</span>
-      <Button className="btn-outline" disabled={page >= totalPages} onClick={() => onPage(page + 1)} type="button">→</Button>
+      <Button className="btn-outline" disabled={page >= totalPages} onClick={() => onPage(page + 1)} type="button"><ChevronRightIcon /></Button>
     </div>
   )
 }
@@ -88,6 +86,7 @@ function DesktopMovementRow({
   return (
     <TableRow className="desktop-movement-row" onClick={() => onEdit(index, movimiento)}>
       <TableCell className="desktop-movement-name">
+        {movimiento.tipo === "gasto" ? <span className="desktop-movement-icon"><CategoriaIcon categoria={movimiento.categoria} /></span> : <span className="desktop-movement-icon type-transfer"><ArrowUpRightIcon /></span>}
         <strong>{nombreMovimiento(movimiento)}</strong>
         <small>{movimiento.tipo === "gasto" ? movimiento.categoria : `De ${movimiento.de} a ${movimiento.a}`}</small>
       </TableCell>
@@ -131,7 +130,6 @@ export function DesktopWorkspace({
   const [movementType, setMovementType] = useState("todos")
   const [movementCategory, setMovementCategory] = useState("todas")
   const [movementPayer, setMovementPayer] = useState("todos")
-  const [movementSort, setMovementSort] = useState("categoria")
   const [summaryPage, setSummaryPage] = useState(1)
   const [summarySearch, setSummarySearch] = useState("")
   const [summarySort, setSummarySort] = useState("nombre")
@@ -144,18 +142,8 @@ export function DesktopWorkspace({
       .filter(({ movimiento }) => movementType === "todos" || movimiento.tipo === movementType)
       .filter(({ movimiento }) => movementCategory === "todas" || (movimiento.tipo === "gasto" && movimiento.categoria === movementCategory))
       .filter(({ movimiento }) => movementPayer === "todos" || (movimiento.tipo === "gasto" ? movimiento.pagador === movementPayer : movimiento.de === movementPayer))
-      .sort((a, b) => {
-        if (movementSort === "monto") return a.movimiento.monto - b.movimiento.monto
-        if (movementSort === "pagador") {
-          const aName = a.movimiento.tipo === "gasto" ? a.movimiento.pagador : a.movimiento.de
-          const bName = b.movimiento.tipo === "gasto" ? b.movimiento.pagador : b.movimiento.de
-          return aName.localeCompare(bName)
-        }
-        const aCat = a.movimiento.tipo === "gasto" ? getCategoriaOrden(a.movimiento.categoria) : 999
-        const bCat = b.movimiento.tipo === "gasto" ? getCategoriaOrden(b.movimiento.categoria) : 999
-        return aCat - bCat || a.movimiento.monto - b.movimiento.monto
-      })
-  }, [movementCategory, movementPayer, movementSearch, movementSort, movementType, movimientosCard, nombreMovimiento])
+      .sort((a, b) => b.movimiento.monto - a.movimiento.monto)
+  }, [movementCategory, movementPayer, movementSearch, movementType, movimientosCard, nombreMovimiento])
 
   const filteredSaldos = useMemo(() => {
     const text = summarySearch.trim().toLowerCase()
@@ -169,12 +157,12 @@ export function DesktopWorkspace({
       })
   }, [saldos, summarySearch, summarySort])
 
-  const movementTotalPages = Math.max(1, Math.ceil(filteredMovements.length / pageSize))
-  const summaryTotalPages = Math.max(1, Math.ceil(filteredSaldos.length / pageSize))
+  const movementTotalPages = Math.max(1, Math.ceil(filteredMovements.length / movementPageSize))
+  const summaryTotalPages = Math.max(1, Math.ceil(filteredSaldos.length / summaryPageSize))
   const currentMovementPage = Math.min(movementPage, movementTotalPages)
   const currentSummaryPage = Math.min(summaryPage, summaryTotalPages)
-  const pagedMovements = filteredMovements.slice((currentMovementPage - 1) * pageSize, currentMovementPage * pageSize)
-  const pagedSaldos = filteredSaldos.slice((currentSummaryPage - 1) * pageSize, currentSummaryPage * pageSize)
+  const pagedMovements = filteredMovements.slice((currentMovementPage - 1) * movementPageSize, currentMovementPage * movementPageSize)
+  const pagedSaldos = filteredSaldos.slice((currentSummaryPage - 1) * summaryPageSize, currentSummaryPage * summaryPageSize)
   const navItems = [
     { section: "personas" as const, label: "Personas", meta: `${personas.length} personas`, icon: UsersIcon },
     { section: "movimientos" as const, label: "Movimientos", meta: `${movimientos.length} movimientos`, icon: ArrowUpRightIcon },
@@ -208,7 +196,7 @@ export function DesktopWorkspace({
       <section className={`desktop-left-panel desktop-left-${desktopSection}`}>
         {desktopSection === "personas" ? (
           <>
-            <header><UsersIcon /><h2>Personas</h2><p>Añadí las personas que participan en los gastos.</p></header>
+            <header><h2>Personas</h2><p>Añadí las personas que participan en los gastos.</p></header>
             <div className="desktop-panel-card">
               <h3>Añadir persona</h3>
               <PersonaForm nombre={nombre} onChange={onNombreChange} onAdd={onAddPersona} />
@@ -218,7 +206,7 @@ export function DesktopWorkspace({
         ) : null}
         {desktopSection === "movimientos" ? (
           <>
-            <header><ArrowUpRightIcon /><h2>Movimientos</h2><p>Registrá gastos y transferencias.</p></header>
+            <header><h2>Movimientos</h2><p>Registrá gastos y transferencias.</p></header>
             <div className="desktop-panel-card desktop-form-stack">
               <Tabs defaultValue="gasto">
                 <TabsList className="tabs-list">
@@ -233,14 +221,14 @@ export function DesktopWorkspace({
         ) : null}
         {desktopSection === "resumen" ? (
           <>
-            <header><PieChartIcon /><h2>Resumen</h2><p>Revisá cuánto debe pagar o recibir cada persona.</p></header>
+            <header><h2>Resumen</h2><p>Revisá cuánto debe pagar o recibir cada persona.</p></header>
             <div className="desktop-panel-card desktop-summary-card">
               <h3>Resumen general</h3>
               <div className="desktop-mini-totals"><span>Total gastado<strong>{formatoARS.format(totalGastado)}</strong></span><span>Promedio por persona<strong>{formatoARS.format(promedio)}</strong></span></div>
               <CategoryPie data={gastosPorCategoria} />
               <CategoryDetailList data={gastosPorCategoria} />
-              <Button className="btn-outline" onClick={onShareLink} type="button"><ShareIcon data-icon="inline-start" />Compartir resumen</Button>
               <RepartirDialog open={settlementOpen} onOpenChange={onSettlementOpenChange} pendientes={pendientes} resumenCopiable={resumenCopiable} onShare={onShareReparto} />
+              <Button className="btn-outline desktop-share-summary" onClick={onShareLink} type="button"><ShareIcon data-icon="inline-start" />Compartir resumen</Button>
             </div>
           </>
         ) : null}
@@ -284,11 +272,11 @@ export function DesktopWorkspace({
               {pagedMovements.length === 0 ? <p className="empty">No hay movimientos para mostrar.</p> : null}
             </ScrollArea>
             <div className="desktop-filter-bar">
+              <Button aria-label="Limpiar filtros" className="desktop-clear-filters" onClick={() => { setMovementSearch(""); setMovementType("todos"); setMovementCategory("todas"); setMovementPayer("todos"); setMovementPage(1) }} type="button"><EraserIcon /></Button>
               <label className="desktop-filter-search"><SearchIcon data-icon="inline-start" /><Input placeholder="Buscar por descripción..." value={movementSearch} onChange={(event) => { setMovementSearch(event.target.value); setMovementPage(1) }} /></label>
               <div className="desktop-filter-control"><span>Tipo</span><Select value={movementType} onValueChange={(value) => { setMovementType(value); setMovementPage(1) }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="todos">Todos</SelectItem><SelectItem value="gasto">Gastos</SelectItem><SelectItem value="transferencia">Transferencias</SelectItem></SelectGroup></SelectContent></Select></div>
               <div className="desktop-filter-control"><span>Categoría</span><Select value={movementCategory} onValueChange={(value) => { setMovementCategory(value); setMovementPage(1) }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="todas">Todas</SelectItem>{CATEGORIAS_GASTO.map((categoria) => <SelectItem key={categoria.key} value={categoria.key}><CategoriaIcon categoria={categoria.key} />{categoria.label}</SelectItem>)}</SelectGroup></SelectContent></Select></div>
               <div className="desktop-filter-control"><span>Pagó / De</span><Select value={movementPayer} onValueChange={(value) => { setMovementPayer(value); setMovementPage(1) }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="todos">Todos</SelectItem>{personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}</SelectGroup></SelectContent></Select></div>
-              <div className="desktop-filter-control desktop-filter-sort"><span>Ordenar por</span><Select value={movementSort} onValueChange={setMovementSort}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="categoria">Categoría</SelectItem><SelectItem value="monto">Monto</SelectItem><SelectItem value="pagador">Pagador</SelectItem></SelectGroup></SelectContent></Select></div>
               <Pagination page={currentMovementPage} totalPages={movementTotalPages} onPage={setMovementPage} />
             </div>
           </section>
@@ -300,23 +288,23 @@ export function DesktopWorkspace({
               <>
                 <div className="desktop-content-head"><div><h2>Saldos por persona</h2><p>{filteredSaldos.length} personas</p></div></div>
                 <ScrollArea className="desktop-scroll-list">
-                  <div className="desktop-summary-rows">
+                  <div className="desktop-summary-card-grid">
                     {pagedSaldos.map((saldo) => {
                       const estado = estadoSaldo(saldo.saldo)
                       return (
-                        <button className="desktop-summary-row" key={saldo.persona} onClick={() => setSelectedPersona(saldo.persona)} type="button">
-                          <span className={`avatar ${saldo.saldo > 0 ? "avatar-positive" : ""}`}>{iniciales(saldo.persona)}</span>
-                          <strong>{saldo.persona}</strong>
-                          <span><small>Parte</small>{formatoARS.format(saldo.totalDebidoEnGastos)}</span>
-                          <span><small>Gastó</small>{formatoARS.format(saldo.totalSalioBolsillo)}</span>
-                          <span className={estado.className}><small>Saldo</small>{formatoARS.format(saldo.saldo)}</span>
-                          <ChevronRightIcon />
+                        <button className="desktop-summary-person-card" key={saldo.persona} onClick={() => setSelectedPersona(saldo.persona)} type="button">
+                          <header><SlidingText className="desktop-summary-card-name">{saldo.persona}</SlidingText><Badge className={estado.className}>{estado.label}</Badge></header>
+                          <span>Le tocaba gastar<b>{formatoARS.format(saldo.totalDebidoEnGastos)}</b></span>
+                          <span>Gastó<b>{formatoARS.format(saldo.totalSalioBolsillo)}</b></span>
+                          <span>Ya recibió<b>{formatoARS.format(saldo.totalRecibido)}</b></span>
+                          <span>Saldo<b className={estado.className}>{formatoARS.format(saldo.saldo)}</b></span>
                         </button>
                       )
                     })}
                   </div>
                 </ScrollArea>
                 <div className="desktop-filter-bar">
+                  <Button aria-label="Limpiar filtros" className="desktop-clear-filters" onClick={() => { setSummarySearch(""); setSummarySort("nombre"); setSummaryPage(1) }} type="button"><EraserIcon /></Button>
                   <label className="desktop-filter-search"><SearchIcon data-icon="inline-start" /><Input placeholder="Buscar por nombre..." value={summarySearch} onChange={(event) => { setSummarySearch(event.target.value); setSummaryPage(1) }} /></label>
                   <div className="desktop-filter-control desktop-filter-sort"><span>Ordenar por</span><Select value={summarySort} onValueChange={setSummarySort}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="nombre">Nombre</SelectItem><SelectItem value="saldo">Saldo</SelectItem><SelectItem value="parte">Parte</SelectItem><SelectItem value="gasto">Gastó</SelectItem></SelectGroup></SelectContent></Select></div>
                   <Pagination page={currentSummaryPage} totalPages={summaryTotalPages} onPage={setSummaryPage} />

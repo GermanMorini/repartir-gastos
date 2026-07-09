@@ -2722,29 +2722,9 @@ body {
 
   .desktop-left-panel > header {
     display: grid;
-    grid-template-columns: 4rem 1fr;
-    gap: 0.9rem;
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
     align-items: center;
-  }
-
-  .desktop-left-panel > header svg {
-    width: 4rem;
-    height: 4rem;
-    grid-row: span 2;
-    border-radius: 999px;
-    background: #eaf1ff;
-    color: var(--blue);
-    padding: 1rem;
-  }
-
-  .desktop-left-movimientos > header svg {
-    background: #e6f6ec;
-    color: var(--primary);
-  }
-
-  .desktop-left-resumen > header svg {
-    background: #f0e7ff;
-    color: #6d28d9;
   }
 
   .desktop-left-panel h2 {
@@ -2775,6 +2755,19 @@ body {
   .desktop-form-stack {
     display: flex;
     flex-direction: column;
+  }
+
+  .desktop-panel-card .add-person-row {
+    gap: 0.75rem;
+  }
+
+  .desktop-panel-card .add-person-row > button,
+  .desktop-panel-card .add-person {
+    width: 100%;
+  }
+
+  .desktop-panel-card .add-person-row > button {
+    order: 2;
   }
 
   .desktop-tip {
@@ -2933,6 +2926,9 @@ body {
   }
 
   .desktop-main-panel {
+    background:
+      linear-gradient(rgb(248 250 252 / 0.18), rgb(248 250 252 / 0.18)),
+      url("/fondo.png") center / cover no-repeat;
     padding: 1.25rem;
   }
 
@@ -2941,6 +2937,7 @@ body {
     height: 100%;
     min-height: 0;
     flex-direction: column;
+    backdrop-filter: blur(2px);
     overflow: hidden;
   }
 
@@ -3014,13 +3011,20 @@ body {
     align-items: center;
   }
 
-  .desktop-movement-name::before {
-    content: "";
+  .desktop-movement-icon {
+    display: grid;
     width: 2.5rem;
     height: 2.5rem;
+    place-items: center;
     grid-row: span 2;
     border-radius: 999px;
     background: #e8f5ee;
+  }
+
+  .desktop-movement-icon svg {
+    width: 1.65rem;
+    height: 1.65rem;
+    stroke-width: 2.4;
   }
 
   .desktop-movement-name strong,
@@ -3145,6 +3149,28 @@ body {
     padding: 0;
   }
 
+  .desktop-clear-filters {
+    min-width: 3.25rem;
+    min-height: 3.25rem;
+    border-color: #6d28d9;
+    border-radius: 8px;
+    background: #6d28d9;
+    color: #fff;
+    padding: 0;
+  }
+
+  .desktop-clear-filters:hover {
+    border-color: #5b21b6;
+    background: #5b21b6;
+    color: #fff;
+  }
+
+  .desktop-clear-filters svg {
+    width: 1.35rem;
+    height: 1.35rem;
+    stroke-width: 2.7;
+  }
+
   .desktop-filter-sort {
     width: 13rem;
   }
@@ -3160,9 +3186,23 @@ body {
   .desktop-pagination .btn {
     min-width: 3.25rem;
     min-height: 3.25rem;
+    background: #6d28d9;
+    border-color: #6d28d9;
     border-radius: 8px;
+    color: #fff;
     padding: 0;
-    font-size: 1.2rem;
+  }
+
+  .desktop-pagination .btn:disabled {
+    border-color: #d8b4fe;
+    background: #ede9fe;
+    color: #7c3aed;
+  }
+
+  .desktop-pagination .btn svg {
+    width: 1.6rem;
+    height: 1.6rem;
+    stroke-width: 3;
   }
 
   .desktop-summary-row {
@@ -3200,6 +3240,119 @@ body {
     color: var(--danger);
   }
 
+  .desktop-summary-table {
+    min-width: 48rem;
+  }
+
+  .desktop-summary-table .table-head {
+    background: #fbfcfe;
+    color: #667085;
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  .desktop-summary-table .table-cell {
+    padding: 1rem;
+    color: #111827;
+    font-size: 1.05rem;
+    font-weight: 800;
+    vertical-align: middle;
+  }
+
+  .desktop-summary-table-row {
+    cursor: pointer;
+  }
+
+  .desktop-summary-table-row:hover .table-cell {
+    background: #fbfcfe;
+  }
+
+  .desktop-summary-person {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .desktop-summary-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+    padding: 1rem;
+  }
+
+  .desktop-summary-person-card {
+    display: grid;
+    min-height: 0;
+    align-content: start;
+    gap: 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgb(255 255 255 / 0.78);
+    color: var(--foreground);
+    padding: 0.85rem 0.95rem;
+    text-align: left;
+  }
+
+  .desktop-summary-person-card:hover {
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 1px #c4b5fd;
+  }
+
+  .desktop-summary-person-card > header {
+    display: grid;
+    justify-items: start;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .desktop-summary-card-name {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    color: #101828;
+    font-size: 1.7rem;
+    font-weight: 950;
+    line-height: 1.15;
+  }
+
+  .desktop-summary-person-card > header .badge {
+    justify-self: start;
+    background: rgb(0 122 53 / 0.12);
+    color: var(--primary);
+    font-size: 0.88rem;
+  }
+
+  .desktop-summary-person-card > header .badge.negative {
+    background: rgb(217 45 32 / 0.12);
+    color: #d92d20 !important;
+  }
+
+  .desktop-summary-person-card > header .badge.neutral {
+    background: rgb(83 96 120 / 0.12);
+    color: #536078 !important;
+  }
+
+  .desktop-summary-person-card > span {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.75rem;
+    border-top: 1px solid var(--border);
+    color: #536078;
+    font-size: 0.98rem;
+    font-weight: 800;
+    padding-top: 0.55rem;
+  }
+
+  .desktop-summary-person-card b {
+    color: #101828;
+    font-size: 1.12rem;
+    font-weight: 950;
+    text-align: right;
+    white-space: nowrap;
+  }
+
   .desktop-summary-card h3 {
     margin-top: 0;
   }
@@ -3207,13 +3360,14 @@ body {
   .desktop-mini-totals {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.7rem;
+    gap: 1rem;
+    align-items: end;
   }
 
   .desktop-mini-totals span {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.8rem;
+    display: grid;
+    min-height: 4rem;
+    align-content: end;
     color: var(--muted-foreground);
     font-weight: 700;
   }
@@ -3231,6 +3385,12 @@ body {
     margin-top: 1rem;
     background: #6d28d9;
     border-color: #6d28d9;
+  }
+
+  .desktop-share-summary {
+    width: 100%;
+    min-height: 3.25rem;
+    margin-top: 0.75rem;
   }
 
   .desktop-person-detail {
