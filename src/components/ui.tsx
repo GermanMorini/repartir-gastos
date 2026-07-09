@@ -10,6 +10,14 @@ import { createContext, useContext, useState } from "react"
 import type { ComponentProps, ReactNode } from "react"
 import { cn } from "../lib/utils"
 
+let scrollUntil = 0
+
+if (typeof window !== "undefined") {
+  window.addEventListener("scroll", () => {
+    scrollUntil = Date.now() + 180
+  }, { passive: true })
+}
+
 export function Button({ className, ...props }: ComponentProps<"button">) {
   return <button className={cn("btn", className)} {...props} />
 }
@@ -166,7 +174,21 @@ export const TabsTrigger = TabsPrimitive.Trigger
 export const TabsContent = TabsPrimitive.Content
 
 export const DropdownMenu = DropdownMenuPrimitive.Root
-export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
+
+export function DropdownMenuTrigger({ onPointerDown, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+  return (
+    <DropdownMenuPrimitive.Trigger
+      onPointerDown={(event) => {
+        if (Date.now() < scrollUntil) {
+          event.preventDefault()
+          return
+        }
+        onPointerDown?.(event)
+      }}
+      {...props}
+    />
+  )
+}
 export const DropdownMenuGroup = DropdownMenuPrimitive.Group
 export const DropdownMenuLabel = DropdownMenuPrimitive.Label
 export const DropdownMenuSeparator = DropdownMenuPrimitive.Separator

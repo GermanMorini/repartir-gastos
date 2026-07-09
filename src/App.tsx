@@ -748,7 +748,7 @@ export default function App() {
                 <form className="edit-form" onSubmit={(event) => { event.preventDefault(); aceptarEdicion() }}>
                   <label className="edit-field">
                     <span>Nombre</span>
-                    <Input autoFocus placeholder="Nombre" value={edicion?.movimiento.descripcion ?? ""} onChange={(event) => setEdicion(edicion ? { ...edicion, movimiento: { ...edicion.movimiento, descripcion: event.target.value } } : null)} />
+                    <Input placeholder="Nombre" value={edicion?.movimiento.descripcion ?? ""} onChange={(event) => setEdicion(edicion ? { ...edicion, movimiento: { ...edicion.movimiento, descripcion: event.target.value } } : null)} />
                   </label>
                   <label className="edit-field">
                     <span>Total</span>
