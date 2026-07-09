@@ -5,8 +5,10 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
+import useEmblaCarousel from "embla-carousel-react"
+import type { UseEmblaCarouselType } from "embla-carousel-react"
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
-import { createContext, useContext, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import type { ComponentProps, ReactNode } from "react"
 import { cn } from "../lib/utils"
 
@@ -24,6 +26,81 @@ export function Button({ className, ...props }: ComponentProps<"button">) {
 
 export function Card({ className, ...props }: ComponentProps<"section">) {
   return <section className={cn("card", className)} {...props} />
+}
+
+export type CarouselApi = UseEmblaCarouselType[1]
+type CarouselContextValue = {
+  carouselRef: UseEmblaCarouselType[0]
+  api: CarouselApi
+  scrollPrev: () => void
+  scrollNext: () => void
+  canScrollPrev: boolean
+  canScrollNext: boolean
+}
+
+const CarouselContext = createContext<CarouselContextValue | null>(null)
+
+function useCarousel() {
+  const context = useContext(CarouselContext)
+  if (!context) throw new Error("useCarousel must be used within a Carousel")
+  return context
+}
+
+export function Carousel({
+  children,
+  className,
+  setApi,
+  ...props
+}: ComponentProps<"div"> & { setApi?: (api: CarouselApi) => void }) {
+  const [carouselRef, api] = useEmblaCarousel({ align: "start", loop: false })
+  const [canScrollPrev, setCanScrollPrev] = useState(false)
+  const [canScrollNext, setCanScrollNext] = useState(false)
+
+  const onSelect = useCallback((emblaApi: NonNullable<CarouselApi>) => {
+    setCanScrollPrev(emblaApi.canScrollPrev())
+    setCanScrollNext(emblaApi.canScrollNext())
+  }, [])
+
+  useEffect(() => {
+    if (!api) return
+    setApi?.(api)
+    onSelect(api)
+    api.on("reInit", onSelect)
+    api.on("select", onSelect)
+    return () => {
+      api.off("reInit", onSelect)
+      api.off("select", onSelect)
+    }
+  }, [api, onSelect, setApi])
+
+  return (
+    <CarouselContext.Provider value={{ carouselRef, api, scrollPrev: () => api?.scrollPrev(), scrollNext: () => api?.scrollNext(), canScrollPrev, canScrollNext }}>
+      <div className={cn("carousel", className)} {...props}>{children}</div>
+    </CarouselContext.Provider>
+  )
+}
+
+export function CarouselContent({ className, ...props }: ComponentProps<"div">) {
+  const { carouselRef } = useCarousel()
+  return (
+    <div className="carousel-viewport" ref={carouselRef}>
+      <div className={cn("carousel-content", className)} {...props} />
+    </div>
+  )
+}
+
+export function CarouselItem({ className, ...props }: ComponentProps<"div">) {
+  return <div className={cn("carousel-item", className)} {...props} />
+}
+
+export function CarouselPrevious({ className, ...props }: ComponentProps<"button">) {
+  const { canScrollPrev, scrollPrev } = useCarousel()
+  return <Button className={cn("carousel-button", className)} disabled={!canScrollPrev} onClick={scrollPrev} type="button" {...props}>←</Button>
+}
+
+export function CarouselNext({ className, ...props }: ComponentProps<"button">) {
+  const { canScrollNext, scrollNext } = useCarousel()
+  return <Button className={cn("carousel-button", className)} disabled={!canScrollNext} onClick={scrollNext} type="button" {...props}>→</Button>
 }
 
 export function Table({ className, ...props }: ComponentProps<"table">) {
