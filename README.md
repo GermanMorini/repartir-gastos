@@ -2,6 +2,10 @@
 
 Aplicación web estática para repartir cuentas entre varias personas. Sirve para viajes, comidas, salidas o cualquier gasto compartido donde alguien pagó por otras personas y después hay que liquidar saldos.
 
+## Tutorial
+
+![Tutorial de uso](./tutorial.png)
+
 ## Qué permite hacer
 
 - Agregar personas.
@@ -14,6 +18,15 @@ Aplicación web estática para repartir cuentas entre varias personas. Sirve par
 
 ## Cómo funciona
 
-La app calcula cuánto pagó cada persona y cuánto le correspondió pagar según los gastos donde participó. Los pagos realizados reducen deuda pendiente: si Ana pagó a Luis, Ana debe menos y Luis ya recibió parte de lo que le correspondía cobrar. Con esos saldos genera la menor lista práctica de transferencias pendientes.
+Cada gasto se divide solo entre las personas que participaron. Por ejemplo, si una cena de $30.000 se divide entre Ana, Luis y Marta, a cada una le corresponde $10.000. Si Jorge no participó, Jorge no paga nada de esa cena.
+
+Después la app compara dos cosas por persona:
+
+- cuánto dinero puso;
+- cuánto le tocaba pagar.
+
+Si alguien puso más de lo que le tocaba, debe recibir plata. Si puso menos, debe pagar. Si puso justo lo suyo, está al día.
+
+Los pagos ya realizados también cuentan. Si Ana ya le pagó a Luis, la deuda de Ana baja y Luis ya cobró una parte. Con todo eso, la app arma una lista simple de transferencias pendientes para que cada persona termine pagando exactamente su parte.
 
 Los datos se guardan en el navegador con `localStorage`. No hay backend ni cuentas de usuario.

@@ -756,9 +756,9 @@ h2 {
 
 .movement-name {
   flex: 1 1 auto;
-  color: var(--foreground);
-  font-size: 1rem;
-  font-weight: 800;
+  color: #000;
+  font-size: 1.12rem;
+  font-weight: 900;
 }
 
 .movement-paid-by,
@@ -1555,13 +1555,11 @@ h2 {
   pointer-events: none;
 }
 
-.calculations-card {
+.calculations-content {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding: 0;
-  border: 0;
-  box-shadow: none;
 }
 
 .calculations-head {
@@ -1584,24 +1582,24 @@ h2 {
   overflow: auto;
 }
 
-.calculations-card.is-exporting {
+.calculations-content.is-exporting {
   width: max-content;
   min-width: 0;
   background: #fff;
   padding: 1.25rem;
 }
 
-.calculations-card.is-exporting .calculations-scroll .scroll-area-viewport {
+.calculations-content.is-exporting .calculations-scroll .scroll-area-viewport {
   max-height: none;
   overflow: visible;
 }
 
-.calculations-card.is-exporting .table-head,
-.calculations-card.is-exporting .table-cell {
+.calculations-content.is-exporting .table-head,
+.calculations-content.is-exporting .table-cell {
   padding-inline: 0.55rem;
 }
 
-.calculations-card.is-exporting .table .number {
+.calculations-content.is-exporting .table .number {
   width: 7.5rem;
 }
 
@@ -1957,9 +1955,9 @@ h2 {
 
 @media (max-width: 430px) {
   .dialog-content {
-    width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
+    width: min(92vw, 34rem);
+    height: auto;
+    max-height: calc(100dvh - 2rem);
     padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
   }
 
@@ -2067,56 +2065,66 @@ h2 {
 
   .receipt-dialog {
     width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
-    top: 0;
+    height: auto;
+    max-height: 90dvh;
+    top: auto;
+    right: 0;
+    bottom: 0;
     left: 0;
     transform: none;
+    border-radius: 18px 18px 0 0;
+    padding-top: 3rem;
+    animation: sheet-from-bottom 180ms ease-out;
   }
 
   .receipt-dialog::before {
-    position: fixed;
-    border-radius: 0;
+    position: absolute;
+    border-radius: 18px 18px 0 0;
   }
 
   .receipt-dialog .dialog-close {
-    position: fixed;
-    top: max(0.55rem, env(safe-area-inset-top));
+    position: absolute;
+    top: 0.75rem;
     right: max(0.75rem, env(safe-area-inset-right));
   }
 
-  .category-dialog {
+  .edit-dialog,
+  .category-dialog,
+  .calculations-dialog,
+  .receipt-dialog {
     width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
-    top: 0;
+    height: auto;
+    max-height: 90dvh;
+    top: auto;
+    right: 0;
+    bottom: 0;
     left: 0;
     transform: none;
-    padding-top: 4rem;
+    border-radius: 18px 18px 0 0;
+    padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    animation: sheet-from-bottom 180ms ease-out;
   }
 
-  .category-dialog::before {
-    position: fixed;
-    z-index: 1;
-    top: 0;
-    right: 0;
-    left: 0;
-    height: 3rem;
-    border-bottom: 1px solid var(--border);
-    background: #fff;
-    content: "";
+  .edit-dialog {
+    overflow: visible;
   }
 
-  .category-dialog .dialog-close {
-    position: fixed;
-    z-index: 2;
-    top: max(0.55rem, env(safe-area-inset-top));
+  .edit-dialog .edit-form,
+  .category-dialog,
+  .calculations-dialog {
+    overflow: auto;
+  }
+
+  .category-dialog .dialog-close,
+  .calculations-dialog .dialog-close,
+  .edit-dialog .dialog-close {
+    top: 0.75rem;
     right: max(0.75rem, env(safe-area-inset-right));
   }
 
   .receipt-scroll,
   .receipt-scroll .scroll-area-viewport {
-    max-height: calc(100dvh - 3rem);
+    max-height: calc(90dvh - 3rem);
     border-radius: 0;
   }
 
@@ -2179,6 +2187,13 @@ h2 {
   }
 }
 
+@keyframes sheet-from-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+}
+
 /* Mockup visual refresh */
 :root {
   --background: #f7f9fc;
@@ -2209,6 +2224,7 @@ body {
 .app-header {
   display: grid;
   grid-template-columns: auto 1fr auto;
+  column-gap: 0.9rem;
   width: min(100%, 76rem);
   min-height: 4.75rem;
   margin: 0 auto 1.25rem;
@@ -2533,19 +2549,6 @@ body {
   color: var(--danger);
 }
 
-.summary-card::after {
-  display: flex;
-  align-items: center;
-  margin-top: 1rem;
-  border-radius: 8px;
-  background: rgb(103 49 189 / 0.09);
-  color: var(--purple);
-  padding: 0.85rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 700;
-  content: "ⓘ  Los valores son netos, considerando todos los gastos y transferencias.";
-}
-
 .totals-grid {
   gap: 0.85rem;
 }
@@ -2593,11 +2596,33 @@ body {
   }
 
   .app-grid {
-    gap: 1rem;
+    display: block;
   }
 
   .app-panel {
-    gap: 1rem;
+    display: block;
+  }
+
+  .desktop-summary {
+    display: block;
+  }
+
+  .mobile-view {
+    display: none;
+  }
+
+  .mobile-view.is-active {
+    display: block;
+  }
+
+  .app-section,
+  .summary-card,
+  .totals-card {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
   }
 
   .person-chips {
@@ -2641,7 +2666,7 @@ body {
   }
 
   .movement-name {
-    font-size: 1.02rem;
+    font-size: 1.16rem;
   }
 
   .movement-participants,
@@ -2651,10 +2676,6 @@ body {
 
   .summary-list {
     margin-inline: 0;
-  }
-
-  .summary-card::after {
-    line-height: 1.5;
   }
 
   .totals-grid {
@@ -2691,12 +2712,140 @@ body {
     text-decoration: none;
   }
 
+  .mobile-nav button {
+    display: flex;
+    min-height: 3.25rem;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.2rem;
+    border: 0;
+    background: transparent;
+    color: #667085;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 0.25rem 0.15rem;
+  }
+
   .mobile-nav svg {
     width: 1.35rem;
     height: 1.35rem;
   }
 
   .mobile-nav .active {
-    color: var(--danger);
+    color: var(--blue);
+  }
+}
+
+.movement-copy .movement-name,
+.movement-copy .movement-name > span {
+  color: #000;
+  font-size: 1.12rem;
+  font-weight: 900;
+}
+
+@media (max-width: 719px) {
+  .movement-copy .movement-name,
+  .movement-copy .movement-name > span {
+    font-size: 1.16rem;
+  }
+
+  .add-person {
+    order: 1;
+  }
+
+  .add-person-row > button {
+    order: 2;
+  }
+
+  .movements-section.mobile-view.is-active {
+    margin-top: 1.35rem;
+  }
+
+  .summary-card.mobile-view.is-active {
+    display: grid;
+  }
+
+  .summary-head {
+    display: contents;
+  }
+
+  .summary-head .section-title {
+    order: 1;
+  }
+
+  .summary-list {
+    order: 2;
+  }
+
+  .summary-actions {
+    order: 3;
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .summary-actions .btn {
+    width: 100%;
+  }
+
+  .site-footer {
+    display: none;
+    justify-content: center;
+    margin: auto 0 0;
+    padding: 2rem 0 calc(0.75rem + env(safe-area-inset-bottom));
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .site-footer.is-mobile-visible {
+    display: flex;
+  }
+
+  .site-footer a {
+    color: var(--blue);
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .edit-dialog,
+  .category-dialog,
+  .calculations-dialog {
+    width: 100vw;
+    height: auto;
+    max-height: 86dvh;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    border-radius: 18px 18px 0 0;
+    padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .receipt-dialog {
+    padding: 3rem 0 0;
+  }
+
+  .edit-dialog {
+    overflow: visible;
+  }
+
+  .edit-dialog .edit-form {
+    max-height: calc(86dvh - 5rem);
+    overflow: auto;
+    padding-right: 0.2rem;
+  }
+
+  .category-dialog,
+  .calculations-dialog {
+    overflow: auto;
+  }
+
+  .category-dialog .dialog-close,
+  .calculations-dialog .dialog-close,
+  .edit-dialog .dialog-close {
+    top: 0.75rem;
+    right: max(0.75rem, env(safe-area-inset-right));
   }
 }

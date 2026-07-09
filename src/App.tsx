@@ -1,4 +1,4 @@
-import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, HomeIcon, ListIcon, MenuIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
+import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
 import { toPng } from "html-to-image"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties, ReactNode } from "react"
@@ -12,6 +12,7 @@ import type { CategoriaGasto, Movimiento, Persona, ResumenCategoria } from "./ty
 const sinSeleccion = ""
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
 type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
+type MobileSection = "personas" | "movimientos" | "resumen" | "total"
 
 function SlidingText({ children, className = "" }: { children: ReactNode; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -142,6 +143,7 @@ export default function App() {
   const [transferencia, setTransferencia] = useState({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
   const [detalleResumenAbierto, setDetalleResumenAbierto] = useState("")
+  const [activeSection, setActiveSection] = useState<MobileSection>("personas")
   const exportCategoriasRef = useRef<HTMLDivElement | null>(null)
   const calculosRef = useRef<HTMLDivElement | null>(null)
   const resumenRef = useRef<HTMLDivElement | null>(null)
@@ -169,6 +171,13 @@ export default function App() {
   const resumenCopiable = pendientes.length
     ? `Esto es lo que debe cada uno:\n${pendientes.map((t) => `- ${t.de} transfiere ${formatoARS.format(t.monto)} a ${t.a}`).join("\n")}\n\n${firmaResumen}`
     : `Esto es lo que debe cada uno:\nLas cuentas ya están equilibradas.\n\n${firmaResumen}`
+
+  function irASeccion(seccion: MobileSection) {
+    setActiveSection(seccion)
+    if (matchMedia("(max-width: 719px)").matches) window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const vistaMobile = (seccion: MobileSection) => `mobile-view ${activeSection === seccion ? "is-active" : ""}`
 
   function agregarPersona() {
     const limpia = nombre.trim()
@@ -476,13 +485,13 @@ export default function App() {
       <div className="app-grid">
         <div className="app-panel">
 
-          <section className="app-section people-section" id="personas">
+          <section className={`app-section people-section ${vistaMobile("personas")}`} id="personas">
             <div className="section-head">
               <div className="section-title section-title-people">
                 <span className="section-icon"><UsersIcon /></span>
                 <div>
                   <h2>Personas</h2>
-                  <p>Gestioná las personas que participan.</p>
+                  <p>Añadí las personas que participan en los gastos.</p>
                 </div>
               </div>
               <div className="people-actions">
@@ -530,7 +539,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="app-section movement-form" id="movimientos">
+          <section className={`app-section movement-form ${vistaMobile("movimientos")}`} id="movimientos">
             <div className="section-head movement-form-head">
               <div className="section-title section-title-movements">
                 <span className="section-icon"><ArrowUpRightIcon /></span>
@@ -576,7 +585,7 @@ export default function App() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button className="select-like" type="button">
-                        {gasto.participantes.length === personas.length ? "Todos los seleccionados" : `${gasto.participantes.length} seleccionados`}
+                        {gasto.participantes.length === 0 ? "Participantes" : gasto.participantes.length === personas.length ? "Todos los seleccionados" : `${gasto.participantes.length} seleccionados`}
                         <ChevronDownIcon data-icon="inline-end" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -668,7 +677,7 @@ export default function App() {
             </Tabs>
           </section>
 
-          <section className="app-section movements-section">
+          <section className={`app-section movements-section ${vistaMobile("movimientos")}`}>
             <div className="section-head">
               <h2>Listado</h2>
             </div>
@@ -733,7 +742,7 @@ export default function App() {
               </Button>
             ) : null}
             <Dialog open={edicion !== null} onOpenChange={(open) => !open && setEdicion(null)}>
-              <DialogContent>
+              <DialogContent className="edit-dialog">
                 <DialogTitle>Editar movimiento</DialogTitle>
                 <DialogDescription>Cambia los datos de este movimiento</DialogDescription>
                 <form className="edit-form" onSubmit={(event) => { event.preventDefault(); aceptarEdicion() }}>
@@ -783,7 +792,7 @@ export default function App() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button className="select-like" type="button">
-                              {edicion.movimiento.participantes.length === personas.length ? "Todos los seleccionados" : `${edicion.movimiento.participantes.length} seleccionados`}
+                              {edicion.movimiento.participantes.length === 0 ? "Participantes" : edicion.movimiento.participantes.length === personas.length ? "Todos los seleccionados" : `${edicion.movimiento.participantes.length} seleccionados`}
                               <ChevronDownIcon data-icon="inline-end" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -854,7 +863,7 @@ export default function App() {
         </div>
 
         <aside className="desktop-summary">
-          <Card className="summary-card" id="resumen">
+          <Card className={`summary-card ${vistaMobile("resumen")}`} id="resumen">
             <div className="summary-head">
               <div className="section-title section-title-summary">
                 <span className="section-icon"><UsersIcon /></span>
@@ -875,7 +884,7 @@ export default function App() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="calculations-dialog">
-                    <Card className="calculations-card" ref={calculosRef}>
+                    <div className="calculations-content" ref={calculosRef}>
                       <div className="calculations-head">
                         <div>
                           <DialogTitle>Cálculos hechos</DialogTitle>
@@ -906,7 +915,7 @@ export default function App() {
                           </TableBody>
                         </Table>
                       </ScrollArea>
-                    </Card>
+                    </div>
                     <div className="dialog-actions">
                       <Button className="btn-outline" onClick={() => navigator.clipboard.writeText(textoMatrizCalculos()).then(() => toast.success("Contenido copiado."))} type="button">
                         <CopyIcon data-icon="inline-start" />
@@ -1012,7 +1021,7 @@ export default function App() {
             </div>
           </Card>
 
-          <Card className="totals-card" id="totales">
+          <Card className={`totals-card ${vistaMobile("total")}`} id="totales">
             <div className="totals-head">
               <div className="section-title section-title-total">
                 <span className="section-icon"><WalletCardsIcon /></span>
@@ -1109,14 +1118,14 @@ export default function App() {
           </Card>
         </aside>
       </div>
-      <footer className="site-footer">
-        <a href="https://github.com/GermanMorini/repartir-gastos" rel="noreferrer" target="_blank">Repositorio en GitHub</a>
+      <footer className={`site-footer ${activeSection === "total" ? "is-mobile-visible" : ""}`}>
+        ¿Te gustó la aplicación? Seguime en <a href="https://github.com/GermanMorini/repartir-gastos" rel="noreferrer" target="_blank">github</a>
       </footer>
       <nav className="mobile-nav" aria-label="Navegación principal">
-        <a className="active" href="#"><HomeIcon />Inicio</a>
-        <a href="#movimientos"><ListIcon />Movimientos</a>
-        <a href="#personas"><UserIcon />Personas</a>
-        <a href="#resumen"><MenuIcon />Más</a>
+        <button className={activeSection === "personas" ? "active" : ""} onClick={() => irASeccion("personas")} type="button"><UsersIcon />Personas</button>
+        <button className={activeSection === "movimientos" ? "active" : ""} onClick={() => irASeccion("movimientos")} type="button"><ReceiptTextIcon />Movimientos</button>
+        <button className={activeSection === "resumen" ? "active" : ""} onClick={() => irASeccion("resumen")} type="button"><UserIcon />Resumen</button>
+        <button className={activeSection === "total" ? "active" : ""} onClick={() => irASeccion("total")} type="button"><WalletCardsIcon />Total</button>
       </nav>
     </main>
   )
