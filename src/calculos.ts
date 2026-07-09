@@ -1,7 +1,28 @@
 import Decimal from "decimal.js"
-import { getCategoria } from "./categories.ts"
+import { getCategoria, getCategoriaOrden } from "./categories.ts"
 import type { FilaCalculo, Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "./types"
 
+/**
+ * Algoritmo usado por la app.
+ *
+ * La app calcula un saldo pendiente por persona.
+ * En palabras simples:
+ * - si alguien puso más dinero del que le tocaba gastar, queda con saldo positivo;
+ * - si alguien puso menos dinero del que le tocaba gastar, queda con saldo negativo;
+ * - las transferencias registradas son pagos ya realizados y ajustan ese saldo.
+ *
+ * Fórmula central:
+ * saldo = gastos que pagó + pagos que envió - pagos que recibió - parte que le tocaba
+ *
+ * Después, las transferencias pendientes se generan uniendo saldos negativos
+ * con saldos positivos. Quien tiene saldo negativo paga. Quien tiene saldo
+ * positivo cobra. El emparejamiento es greedy: toma el primer deudor y el
+ * primer acreedor, mueve el menor monto posible y avanza cuando alguno queda
+ * saldado.
+ *
+ * Decimal.js se usa en todo el cálculo para evitar errores de coma flotante.
+ * Solo se redondea a moneda al devolver datos para UI/tests.
+ */
 type SaldoInterno = Omit<SaldoPersona, "saldo" | "totalPagadoEnGastos" | "totalDebidoEnGastos" | "totalTransferido" | "totalRecibido" | "totalSalioBolsillo"> & {
   saldo: Decimal
   totalPagadoEnGastos: Decimal
@@ -14,11 +35,23 @@ type SaldoInterno = Omit<SaldoPersona, "saldo" | "totalPagadoEnGastos" | "totalD
 const decimal = (monto: Decimal.Value) => new Decimal(monto)
 const redondearMoneda = (monto: Decimal.Value) => decimal(monto).toDecimalPlaces(2).toNumber()
 
+/** Devuelve la parte de un gasto que corresponde a una persona. */
 function parteGasto(movimiento: Extract<Movimiento, { tipo: "gasto" }>, persona: Persona) {
   if (!movimiento.participantes.includes(persona) || movimiento.participantes.length === 0) return decimal(0)
   return decimal(movimiento.monto).div(movimiento.participantes.length)
 }
 
+/**
+ * Aplica un movimiento al saldo acumulado.
+ *
+ * Gasto:
+ * - el pagador suma el monto completo porque puso dinero;
+ * - cada participante resta su parte porque eso era lo que le tocaba gastar.
+ *
+ * Transferencia registrada:
+ * - "de" suma porque ya pagó dinero;
+ * - "a" resta porque ya recibió dinero.
+ */
 function aplicarMovimiento(movimiento: Movimiento, existe: (persona: Persona) => boolean, aplicar: (persona: Persona, monto: Decimal) => void) {
   if (movimiento.tipo === "gasto") {
     if (!existe(movimiento.pagador) || movimiento.participantes.length === 0) return
@@ -38,7 +71,19 @@ function textoMovimientoCalculo(movimiento: Movimiento) {
   return movimiento.descripcion?.trim() || (movimiento.tipo === "gasto" ? "Gasto" : "Pago realizado")
 }
 
+/**
+ * Calcula el saldo pendiente de cada persona.
+ *
+ * Este es el cálculo principal que usa el resumen, el reparto final y las
+ * validaciones. También guarda subtotales para explicar el resultado:
+ * - totalPagadoEnGastos: gastos que pagó como pagador;
+ * - totalDebidoEnGastos: suma de sus partes en gastos donde participó;
+ * - totalTransferido: pagos realizados que envió;
+ * - totalRecibido: pagos realizados que recibió;
+ * - totalSalioBolsillo: gastos pagados + pagos enviados.
+ */
 export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): SaldoPersona[] {
+  // Arranca cada persona en cero para poder acumular sus totales.
   const saldos = new Map<Persona, SaldoInterno>(
     personas.map((persona) => [
       persona,
@@ -59,9 +104,11 @@ export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): 
       const pagador = saldos.get(movimiento.pagador)
       if (!pagador || movimiento.participantes.length === 0) continue
 
+      // El pagador puso el total del gasto desde su bolsillo.
       const monto = movimiento.monto
       pagador.totalPagadoEnGastos = pagador.totalPagadoEnGastos.plus(monto)
 
+      // Cada participante debe solo su parte de este gasto.
       for (const persona of movimiento.participantes) {
         const saldo = saldos.get(persona)
         if (!saldo) continue
@@ -73,11 +120,13 @@ export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): 
       const destino = saldos.get(movimiento.a)
       if (!origen || !destino) continue
 
+      // Una transferencia registrada es plata que ya se pagó.
       const monto = movimiento.monto
       origen.totalTransferido = origen.totalTransferido.plus(monto)
       destino.totalRecibido = destino.totalRecibido.plus(monto)
     }
 
+    // Mantiene el saldo acumulado para usar la misma regla en otras vistas.
     aplicarMovimiento(
       movimiento,
       (persona) => saldos.has(persona),
@@ -88,6 +137,7 @@ export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): 
     )
   }
 
+  // Devuelve números listos para mostrar: moneda redondeada a dos decimales.
   return [...saldos.values()].map((saldo) => ({
     ...saldo,
     saldo: redondearMoneda(saldo.totalPagadoEnGastos.plus(saldo.totalTransferido).minus(saldo.totalRecibido).minus(saldo.totalDebidoEnGastos)),
@@ -99,6 +149,16 @@ export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): 
   }))
 }
 
+/**
+ * Genera pagos pendientes desde deudores hacia acreedores.
+ *
+ * Entrada:
+ * - saldo < 0: persona debe pagar;
+ * - saldo > 0: persona debe recibir.
+ *
+ * El algoritmo no busca una combinación "más linda"; usa el emparejamiento
+ * mínimo suficiente para saldar todos los balances.
+ */
 export function calcularTransferenciasPendientes(saldos: SaldoPersona[]): TransferenciaPendiente[] {
   const acreedores = saldos
     .filter((saldo) => decimal(saldo.saldo).gt(0))
@@ -122,6 +182,12 @@ export function calcularTransferenciasPendientes(saldos: SaldoPersona[]): Transf
   return transferencias
 }
 
+/**
+ * Construye la matriz paso a paso que se muestra en "Cálculos".
+ *
+ * Cada fila muestra el saldo acumulado después de aplicar un movimiento.
+ * Sirve para auditar cómo se llega al saldo final de cada persona.
+ */
 export function getMatrizCalculos(personas: Persona[], movimientos: Movimiento[]): FilaCalculo[] {
   const saldos = new Map<Persona, Decimal>(personas.map((persona) => [persona, decimal(0)]))
   const fila = (paso: number, movimiento: string, monto: number, personaDestacada: Persona): FilaCalculo => ({
@@ -145,6 +211,7 @@ export function getMatrizCalculos(personas: Persona[], movimientos: Movimiento[]
   return filas
 }
 
+/** Agrupa solo gastos por categoría; las transferencias no son consumo. */
 export function getGastosPorCategoria(movimientos: Movimiento[]): ResumenCategoria[] {
   const grupos = new Map<string, { monto: Decimal; cantidadGastos: number }>()
 
@@ -167,9 +234,16 @@ export function getGastosPorCategoria(movimientos: Movimiento[]): ResumenCategor
         porcentaje: total.isZero() ? 0 : redondearMoneda(item.monto.mul(100).div(total)),
       }
     })
-    .sort((a, b) => b.monto - a.monto)
+    .sort((a, b) => getCategoriaOrden(a.categoria) - getCategoriaOrden(b.categoria))
 }
 
+/**
+ * Devuelve el resumen de una persona.
+ *
+ * Reutiliza calcularSaldos para no tener una segunda lógica de saldos.
+ * Además arma listas de detalle para el recibo: gastos donde participó,
+ * gastos que pagó, pagos enviados y pagos recibidos.
+ */
 export function getResumenPersona(persona: Persona, movimientos: Movimiento[]) {
   const personas = Array.from(new Set([persona, ...movimientos.flatMap((movimiento) => (movimiento.tipo === "gasto" ? [movimiento.pagador, ...movimiento.participantes] : [movimiento.de, movimiento.a]))]))
   const saldo = calcularSaldos(personas, movimientos).find((item) => item.persona === persona)

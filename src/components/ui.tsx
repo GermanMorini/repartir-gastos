@@ -108,7 +108,7 @@ export function SelectContent({ children, className }: { children: ReactNode; cl
 export function SelectItem({ children, value }: { children: ReactNode; value: string }) {
   return (
     <SelectPrimitive.Item className="select-item" value={value}>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      <SelectPrimitive.ItemText><span className="select-item-content">{children}</span></SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator className="select-item-indicator">
         <CheckIcon data-icon="inline-start" />
       </SelectPrimitive.ItemIndicator>

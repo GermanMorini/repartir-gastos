@@ -1,10 +1,10 @@
-import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
+import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, HomeIcon, ListIcon, MenuIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
 import { toPng } from "html-to-image"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties, ReactNode } from "react"
 import { toast, Toaster } from "sonner"
 import { calcularSaldos, calcularTransferenciasPendientes, formatoARS, getGastosPorCategoria, getMatrizCalculos, getResumenPersona } from "./calculos"
-import { CATEGORIAS_GASTO, CATEGORIA_DEFAULT, getCategoria } from "./categories"
+import { CATEGORIAS_GASTO, CATEGORIA_DEFAULT, getCategoria, getCategoriaOrden } from "./categories"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, Button, Card, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui"
 import { clearState, loadState, saveState } from "./storage"
 import type { CategoriaGasto, Movimiento, Persona, ResumenCategoria } from "./types"
@@ -154,7 +154,7 @@ export default function App() {
       .sort((a, b) => {
         if (a.movimiento.tipo !== b.movimiento.tipo) return Number(a.movimiento.tipo === "transferencia") - Number(b.movimiento.tipo === "transferencia")
         if (a.movimiento.tipo === "transferencia" || b.movimiento.tipo === "transferencia") return a.index - b.index
-        return a.movimiento.categoria.localeCompare(b.movimiento.categoria) || a.movimiento.monto - b.movimiento.monto || a.index - b.index
+        return getCategoriaOrden(a.movimiento.categoria) - getCategoriaOrden(b.movimiento.categoria) || a.movimiento.monto - b.movimiento.monto || a.index - b.index
       }),
     [movimientos],
   )
@@ -167,8 +167,8 @@ export default function App() {
   const fechaCategorias = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date())
   const firmaResumen = "💲 Resumen hecho con https://germanmorini.github.io/repartir-gastos/"
   const resumenCopiable = pendientes.length
-    ? `Reparto final:\n${pendientes.map((t) => `- ${t.de} transfiere ${formatoARS.format(t.monto)} a ${t.a}`).join("\n")}\n\n${firmaResumen}`
-    : `Reparto final:\nLas cuentas ya están equilibradas.\n\n${firmaResumen}`
+    ? `Esto es lo que debe cada uno:\n${pendientes.map((t) => `- ${t.de} transfiere ${formatoARS.format(t.monto)} a ${t.a}`).join("\n")}\n\n${firmaResumen}`
+    : `Esto es lo que debe cada uno:\nLas cuentas ya están equilibradas.\n\n${firmaResumen}`
 
   function agregarPersona() {
     const limpia = nombre.trim()
@@ -181,11 +181,10 @@ export default function App() {
   function borrarPersona(persona: Persona) {
     setPersonas(personas.filter((item) => item !== persona))
     setMovimientos(
-      movimientos.filter((movimiento) =>
-        movimiento.tipo === "gasto"
-          ? movimiento.pagador !== persona && !movimiento.participantes.includes(persona)
-          : movimiento.de !== persona && movimiento.a !== persona,
-      ),
+      movimientos
+        .filter((movimiento) => (movimiento.tipo === "gasto" ? movimiento.pagador !== persona : movimiento.de !== persona && movimiento.a !== persona))
+        .map((movimiento) => (movimiento.tipo === "gasto" ? { ...movimiento, participantes: movimiento.participantes.filter((item) => item !== persona) } : movimiento))
+        .filter((movimiento) => movimiento.tipo === "transferencia" || movimiento.participantes.length > 0),
     )
   }
 
@@ -249,11 +248,11 @@ export default function App() {
     ]
 
     return [
-      `Resumen de ${resumen.persona}:`,
-      `- Le tocaba gastar: ${formatoARS.format(resumen.totalLeTocaba)}`,
-      `- Ya salió de su bolsillo: ${formatoARS.format(resumen.totalSalioBolsillo)}`,
-      `- Ya recibió: ${formatoARS.format(resumen.totalRecibido)}`,
-      `- Resultado: ${resultadoCopiable(resumen)}`,
+      `Este es tu resumen de gastos:`,
+      `- Te tocaba gastar: ${formatoARS.format(resumen.totalLeTocaba)}`,
+      `- Ya pagaste: ${formatoARS.format(resumen.totalSalioBolsillo)}`,
+      `- Recibiste: ${formatoARS.format(resumen.totalRecibido)}`,
+      `- Total: ${resultadoCopiable(resumen)}`,
       ...(detalle.length ? ["", "Detalle:", ...detalle] : []),
     ].join("\n")
   }
@@ -265,6 +264,50 @@ export default function App() {
       "",
       ...gastosPorCategoria.map((item) => `- ${item.label}: ${formatoARS.format(item.monto)} (${porcentaje(item.porcentaje)}, ${item.cantidadGastos} ${item.cantidadGastos === 1 ? "gasto" : "gastos"})`),
     ].join("\n")
+  }
+
+  function textoMovimientos() {
+    const gastos = movimientos.filter((movimiento): movimiento is Gasto => movimiento.tipo === "gasto")
+    const transferencias = movimientos.filter((movimiento): movimiento is Transferencia => movimiento.tipo === "transferencia")
+    const nombreCopiado = (persona: Persona) => persona.toUpperCase()
+    const abreviaturas = new Map(personas.map((persona) => [persona, 1]))
+    let cambio = true
+    while (cambio) {
+      cambio = false
+      const grupos = new Map<string, Persona[]>()
+      personas.forEach((persona) => {
+        const clave = nombreCopiado(persona).slice(0, abreviaturas.get(persona))
+        grupos.set(clave, [...(grupos.get(clave) ?? []), persona])
+      })
+      grupos.forEach((grupo) => {
+        if (grupo.length < 2) return
+        grupo.forEach((persona) => {
+          const largo = abreviaturas.get(persona) ?? 1
+          if (largo < nombreCopiado(persona).length) {
+            abreviaturas.set(persona, largo + 1)
+            cambio = true
+          }
+        })
+      })
+    }
+    const inicialCopiada = (persona: Persona) => nombreCopiado(persona).slice(0, abreviaturas.get(persona))
+    const bloques = personas
+      .map((persona) => {
+        const propios = gastos.filter((movimiento) => movimiento.pagador === persona)
+        if (propios.length === 0) return ""
+        return [
+          `${nombreCopiado(persona)}:`,
+          ...propios.map((movimiento) => `- \`${nombreMovimiento(movimiento)}\`: *${formatoARS.format(movimiento.monto)}* (entre ${movimiento.participantes.map(inicialCopiada).join(", ")})`),
+        ].join("\n")
+      })
+      .filter(Boolean)
+
+    return [
+      "Tengo anotados estos gastos:",
+      "",
+      ...bloques.flatMap((bloque) => [bloque, ""]),
+      ...(transferencias.length ? ["TRANSFERENCIAS:", ...transferencias.map((movimiento) => `- *${formatoARS.format(movimiento.monto)}* (de ${nombreCopiado(movimiento.de)} a ${nombreCopiado(movimiento.a)})`)] : []),
+    ].join("\n").trim()
   }
 
   function descargarImagen(dataUrl: string, nombreArchivo = "gastos-por-categoria.png") {
@@ -406,35 +449,42 @@ export default function App() {
           <CategoryChartShareCard data={gastosPorCategoria} fecha={fechaCategorias} total={totalGastado} />
         </div>
       </div>
+      <header className="app-header">
+        <div className="brand-mark"><UsersIcon /></div>
+        <h1>Repartir gastos</h1>
+        <Dialog>
+          <DialogTrigger asChild>
+            <button aria-label="Limpiar datos" className="clear-button" type="button">
+              <BrushCleaningIcon />
+            </button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogTitle>Limpiar datos</DialogTitle>
+            <DialogDescription>Esto elimina todos los datos ingresados hasta el momento.</DialogDescription>
+            <div className="dialog-actions">
+              <DialogClose asChild>
+                <Button className="btn-outline" type="button">Cancelar</Button>
+              </DialogClose>
+              <DialogClose asChild>
+                <Button className="btn-danger" onClick={limpiarTodo} type="button">Limpiar datos</Button>
+              </DialogClose>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </header>
+
       <div className="app-grid">
         <div className="app-panel">
-          <header className="app-header">
-            <span />
-            <h1>Repartir gastos</h1>
-            <Dialog>
-              <DialogTrigger asChild>
-                <button aria-label="Limpiar datos" className="clear-button" type="button">
-                  <BrushCleaningIcon />
-                </button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogTitle>Limpiar datos</DialogTitle>
-                <DialogDescription>Esto elimina todos los datos ingresados hasta el momento.</DialogDescription>
-                <div className="dialog-actions">
-                  <DialogClose asChild>
-                    <Button className="btn-outline" type="button">Cancelar</Button>
-                  </DialogClose>
-                  <DialogClose asChild>
-                    <Button className="btn-danger" onClick={limpiarTodo} type="button">Limpiar datos</Button>
-                  </DialogClose>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </header>
 
-          <section className="app-section people-section">
+          <section className="app-section people-section" id="personas">
             <div className="section-head">
-              <h2>Personas</h2>
+              <div className="section-title section-title-people">
+                <span className="section-icon"><UsersIcon /></span>
+                <div>
+                  <h2>Personas</h2>
+                  <p>Gestioná las personas que participan.</p>
+                </div>
+              </div>
               <div className="people-actions">
                 <span>{personas.length} personas</span>
               </div>
@@ -454,7 +504,7 @@ export default function App() {
                     </DialogTrigger>
                     <DialogContent>
                       <DialogTitle>Eliminar persona</DialogTitle>
-                      <DialogDescription>Eliminar {persona} también elimina todos sus movimientos asociados.</DialogDescription>
+                      <DialogDescription>Eliminar {persona} borra lo que pagó y recalcula los gastos donde participaba.</DialogDescription>
                       <div className="dialog-actions">
                         <DialogClose asChild>
                           <Button className="btn-outline" type="button">Cancelar</Button>
@@ -480,7 +530,23 @@ export default function App() {
             </div>
           </section>
 
-          <section className="app-section movement-form">
+          <section className="app-section movement-form" id="movimientos">
+            <div className="section-head movement-form-head">
+              <div className="section-title section-title-movements">
+                <span className="section-icon"><ArrowUpRightIcon /></span>
+                <div>
+                  <h2>Movimientos</h2>
+                  <p>Registrá gastos y transferencias.</p>
+                </div>
+              </div>
+              <div className="movement-head-actions">
+                <span className="muted">{movimientos.length} movimientos</span>
+                <Button className="movement-copy-button movement-copy-desktop" onClick={() => navigator.clipboard.writeText(textoMovimientos()).then(() => toast.success("Movimientos copiados."))} type="button">
+                  <CopyIcon data-icon="inline-start" />
+                  Copiar movimientos
+                </Button>
+              </div>
+            </div>
             <Tabs defaultValue="gasto">
               <TabsList className="tabs-list">
                 <TabsTrigger className="tabs-trigger" value="gasto">Gasto</TabsTrigger>
@@ -604,8 +670,7 @@ export default function App() {
 
           <section className="app-section movements-section">
             <div className="section-head">
-              <h2>Movimientos</h2>
-              <span className="muted">{movimientos.length} movimientos</span>
+              <h2>Listado</h2>
             </div>
             <p className="movement-hint">
               <span className="hint-mobile">Tocá en un movimiento para editarlo.</span>
@@ -660,6 +725,12 @@ export default function App() {
                   </div>
                 ))}
               </div>
+            ) : null}
+            {movimientos.length > 0 ? (
+              <Button className="movement-copy-button movement-copy-mobile" onClick={() => navigator.clipboard.writeText(textoMovimientos()).then(() => toast.success("Movimientos copiados."))} type="button">
+                <CopyIcon data-icon="inline-start" />
+                Copiar movimientos
+              </Button>
             ) : null}
             <Dialog open={edicion !== null} onOpenChange={(open) => !open && setEdicion(null)}>
               <DialogContent>
@@ -783,9 +854,18 @@ export default function App() {
         </div>
 
         <aside className="desktop-summary">
-          <Card className="summary-card">
+          <Card className="summary-card" id="resumen">
             <div className="summary-head">
-              <h2>Resumen por persona</h2>
+              <div className="section-title section-title-summary">
+                <span className="section-icon"><UsersIcon /></span>
+                <div>
+                  <h2>Resumen por persona</h2>
+                  <p className="summary-hint">
+                    <span className="hint-mobile">Toca en una persona para ver su hoja de liquidación.</span>
+                    <span className="hint-desktop">Clickeá en una persona para ver su hoja de liquidación.</span>
+                  </p>
+                </div>
+              </div>
               <div className="summary-actions">
                 <Dialog>
                   <DialogTrigger asChild>
@@ -841,10 +921,6 @@ export default function App() {
                 </Dialog>
               </div>
             </div>
-            <p className="summary-hint">
-              <span className="hint-mobile">Toca en una persona para ver su hoja de liquidación.</span>
-              <span className="hint-desktop">Clickeá en una persona para ver su hoja de liquidación.</span>
-            </p>
             <div className="summary-list">
               {saldos.length === 0 ? <p className="empty">Agregá personas para ver saldos.</p> : null}
               {saldos.map((saldo) => {
@@ -911,7 +987,7 @@ export default function App() {
                                         </section>
                                         <section>
                                           <h3><WalletCardsIcon data-icon="inline-start" />Gastos que pagó <strong>{formatoARS.format(resumen.totalPuesto)}</strong></h3>
-                                          {resumen.gastosQuePago.map((movimiento, index) => <p key={`pagado-${index}`}><SlidingText>{nombreMovimiento(movimiento)}</SlidingText> <SlidingText className="receipt-detail-amount">puso {formatoARS.format(movimiento.monto)}</SlidingText></p>)}
+                                          {resumen.gastosQuePago.map((movimiento, index) => <p key={`pagado-${index}`}><SlidingText>{nombreMovimiento(movimiento)}</SlidingText> <SlidingText className="receipt-detail-amount">{formatoARS.format(movimiento.monto)}</SlidingText></p>)}
                                         </section>
                                         <section>
                                           <h3><ArrowUpRightIcon data-icon="inline-start" />Pagos realizados <strong>{formatoARS.format(resumen.totalTransferido)}</strong></h3>
@@ -936,9 +1012,15 @@ export default function App() {
             </div>
           </Card>
 
-          <Card className="totals-card">
+          <Card className="totals-card" id="totales">
             <div className="totals-head">
-              <h2>Totales</h2>
+              <div className="section-title section-title-total">
+                <span className="section-icon"><WalletCardsIcon /></span>
+                <div>
+                  <h2>Total</h2>
+                  <p>Resumen general del viaje.</p>
+                </div>
+              </div>
               <Dialog>
                 <DialogTrigger asChild>
                   <Button className="btn-chart" type="button">
@@ -1030,6 +1112,12 @@ export default function App() {
       <footer className="site-footer">
         <a href="https://github.com/GermanMorini/repartir-gastos" rel="noreferrer" target="_blank">Repositorio en GitHub</a>
       </footer>
+      <nav className="mobile-nav" aria-label="Navegación principal">
+        <a className="active" href="#"><HomeIcon />Inicio</a>
+        <a href="#movimientos"><ListIcon />Movimientos</a>
+        <a href="#personas"><UserIcon />Personas</a>
+        <a href="#resumen"><MenuIcon />Más</a>
+      </nav>
     </main>
   )
 }

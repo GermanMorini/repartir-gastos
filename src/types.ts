@@ -1,5 +1,5 @@
 export type Persona = string
-export type CategoriaGasto = "comida" | "bebida" | "transporte" | "salud" | "ocio" | "alojamiento" | "hogar" | "otros"
+export type CategoriaGasto = "comida" | "bebida" | "transporte" | "combustible" | "salud" | "ocio" | "alojamiento" | "hogar" | "otros"
 
 export type Movimiento =
   | {
