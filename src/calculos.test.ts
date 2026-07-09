@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
-import { calcularSaldos, calcularTransferenciasPendientes, getGastosPorCategoria, getMatrizCalculos, getResumenPersona } from "./calculos.ts"
-import type { Movimiento } from "./types.ts"
+import { calcularSaldos, calcularTransferenciasPendientes, getGastosPorCategoria, getMatrizCalculos, getResumenPersona } from "./lib/calculos.ts"
+import type { Movimiento } from "./types/index.ts"
 
 const centavos = (monto: number) => Math.round(monto * 100)
 const suma = (montos: number[]) => montos.reduce((total, monto) => total + centavos(monto), 0)

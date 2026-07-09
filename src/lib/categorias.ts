@@ -1,5 +1,5 @@
 import { BedIcon, CarIcon, CircleEllipsisIcon, CoffeeIcon, FuelIcon, HeartPulseIcon, HomeIcon, PartyPopperIcon, UtensilsIcon } from "lucide-react"
-import type { CategoriaGasto } from "./types"
+import type { CategoriaGasto } from "../types/index.ts"
 
 export const CATEGORIAS_GASTO: { key: CategoriaGasto; label: string; color: string; icon: typeof UtensilsIcon }[] = [
   { key: "comida", label: "Comida", color: "#86efac", icon: UtensilsIcon },

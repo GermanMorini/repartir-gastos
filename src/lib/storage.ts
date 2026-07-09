@@ -1,4 +1,4 @@
-import type { AppState } from "./types"
+import type { AppState } from "../types"
 
 const KEY = "repartir-cuentas:v1"
 const initialState: AppState = { personas: [], movimientos: [] }

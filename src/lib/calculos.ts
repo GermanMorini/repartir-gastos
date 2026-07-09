@@ -1,6 +1,6 @@
 import Decimal from "decimal.js"
-import { getCategoria, getCategoriaOrden } from "./categories.ts"
-import type { FilaCalculo, Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "./types"
+import { getCategoria, getCategoriaOrden } from "./categorias.ts"
+import type { FilaCalculo, Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "../types/index.ts"
 
 /**
  * Algoritmo usado por la app.
@@ -277,5 +277,3 @@ export function getResumenPersona(persona: Persona, movimientos: Movimiento[]) {
     tieneMovimientos: gastosDondeParticipo.length + gastosQuePago.length + transferenciasEnviadas.length + transferenciasRecibidas.length > 0,
   }
 }
-
-export const formatoARS = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" })
