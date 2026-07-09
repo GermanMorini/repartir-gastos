@@ -1,0 +1,6 @@
+@media (max-width: 719px) {
+  .share-page {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}

@@ -9,6 +9,9 @@ import { Header } from "./Header"
 import { MobileLayout } from "./MobileLayout"
 import { BottomNavigation } from "../components/navigation/BottomNavigation"
 import { CategoriaIcon } from "../components/shared/CategoryBadge"
+import { PersonSummaryMobilePage } from "../features/person-summary/PersonSummary"
+import { SharePage } from "../features/share/SharePage"
+import { encodeShareState } from "../features/share/encodeShare"
 import { EditMovimientoDialog } from "../sections/movimientos/EditMovimientoDialog"
 import { PersonasSection } from "../sections/personas/PersonasSection"
 import { MovimientoItem } from "../sections/movimientos/MovimientoItem"
@@ -32,13 +35,25 @@ type Gasto = Extract<Movimiento, { tipo: "gasto" }>
 type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
 
 export default function App() {
+  const [hash, setHash] = useState(() => window.location.hash)
+
+  useEffect(() => {
+    const update = () => setHash(window.location.hash)
+    window.addEventListener("hashchange", update)
+    return () => window.removeEventListener("hashchange", update)
+  }, [])
+
+  if (hash.startsWith("#/share/")) return <SharePage payload={hash.slice("#/share/".length)} />
+  return <EditableApp />
+}
+
+function EditableApp() {
   const [personas, setPersonas] = useState<Persona[]>(() => loadState().personas)
   const [movimientos, setMovimientos] = useState<Movimiento[]>(() => loadState().movimientos)
   const [nombre, setNombre] = useState("")
   const [gasto, setGasto] = useState({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [] as Persona[], categoria: CATEGORIA_DEFAULT })
   const [transferencia, setTransferencia] = useState({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
-  const [detalleResumenAbierto, setDetalleResumenAbierto] = useState("")
   const [activeSection, setActiveSection] = useState<MobileSection>("personas")
   const [tutorialDialogOpen, setTutorialDialogOpen] = useState(() => !tutorialHidden())
   const [hideTutorial, setHideTutorial] = useState(false)
@@ -324,6 +339,21 @@ export default function App() {
       toast.success("Resumen copiado.")
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return
+      toast.error("No se pudo compartir el resumen.")
+    }
+  }
+
+  async function compartirLinkResumen() {
+    try {
+      const payload = encodeShareState({ personas, movimientos })
+      const url = `${window.location.origin}${window.location.pathname}#/share/${payload}`
+      if (url.length > 7000) {
+        toast.error("El reparto es demasiado grande para compartir por link. Comparte los gastos como texto")
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      toast.success("Link copiado.")
+    } catch {
       toast.error("No se pudo compartir el resumen.")
     }
   }
@@ -781,16 +811,13 @@ export default function App() {
               calculosOpen={calculosOpen}
               calculosRef={calculosRef}
               className={vistaMobile("resumen")}
-              detalleResumenAbierto={detalleResumenAbierto}
               matrizCalculos={matrizCalculos}
               movimientos={movimientos}
               onCalculosOpenChange={setCalculosOpen}
-              onDetalleResumenAbiertoChange={setDetalleResumenAbierto}
               onExportCalculos={() => void exportarCalculosComoImagen()}
               onResumenOpenPersonaChange={setResumenOpenPersona}
-              onShareResumenPersona={(resumen) => void compartirResumenPersona(resumen)}
+              onShareLink={() => void compartirLinkResumen()}
               personas={personas}
-              resumenOpenPersona={resumenOpenPersona}
               saldos={saldos}
             />
           ) : null}
@@ -819,7 +846,6 @@ export default function App() {
           <DesktopWorkspace
             gastoForm={gastoFormDesktop}
             gastosPorCategoria={gastosPorCategoria}
-            getResumenPersona={(persona) => getResumenPersona(persona, movimientos)}
             movimientos={movimientos}
             movimientosCard={movimientosCard}
             nombre={nombre}
@@ -831,6 +857,7 @@ export default function App() {
             onEditMovimiento={abrirEdicion}
             onNombreChange={setNombre}
             onSettlementOpenChange={setSettlementOpen}
+            onShareLink={() => void compartirLinkResumen()}
             onShareReparto={() => void compartirResumenReparto()}
             pendientes={pendientes}
             personas={personas}
@@ -853,6 +880,16 @@ export default function App() {
           />
         </>
       )}
+      {isMobile && resumenOpenPersona ? (
+        <PersonSummaryMobilePage
+          initialPersona={resumenOpenPersona}
+          movimientos={movimientos}
+          onBack={() => setResumenOpenPersona(null)}
+          onShare={() => void compartirResumenPersona(getResumenPersona(resumenOpenPersona, movimientos))}
+          personas={personas}
+          title="Hoja de liquidación"
+        />
+      ) : null}
       {isMobile ? (
         <footer className={`site-footer ${activeSection === "total" ? "is-mobile-visible" : ""}`}>
           ¿Te gustó la aplicación? Seguime en <a href="https://github.com/GermanMorini/repartir-gastos" rel="noreferrer" target="_blank">github</a>

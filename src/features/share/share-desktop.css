@@ -1,0 +1,13 @@
+@media (min-width: 720px) {
+  .share-page {
+    height: 100dvh;
+    overflow: auto;
+    padding: 1.5rem;
+  }
+
+  .share-desktop-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+  }
+}

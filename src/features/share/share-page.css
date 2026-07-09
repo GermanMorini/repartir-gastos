@@ -1,0 +1,19 @@
+.share-page {
+  min-height: 100dvh;
+  background: #f8fafc;
+  color: var(--foreground);
+}
+
+.share-error {
+  display: grid;
+  place-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.share-error h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+}

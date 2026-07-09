@@ -1,11 +1,34 @@
 import assert from "node:assert/strict"
+import { gzipSync, strToU8 } from "fflate"
 import { calcularSaldos, calcularTransferenciasPendientes, getGastosPorCategoria, getMatrizCalculos, getResumenPersona } from "./lib/calculos.ts"
-import type { Movimiento } from "./types/index.ts"
+import { decodeShareState } from "./features/share/decodeShare.ts"
+import { encodeShareState } from "./features/share/encodeShare.ts"
+import type { AppState, Movimiento } from "./types/index.ts"
 
 const centavos = (monto: number) => Math.round(monto * 100)
 const suma = (montos: number[]) => montos.reduce((total, monto) => total + centavos(monto), 0)
 const saldoPorPersona = (saldos: ReturnType<typeof calcularSaldos>) => new Map(saldos.map((saldo) => [saldo.persona, centavos(saldo.saldo)]))
 const assertCasiCero = (monto: number, tolerancia = 1) => assert.ok(Math.abs(monto) <= tolerancia)
+const payloadShare = (data: unknown) => btoa(Array.from(gzipSync(strToU8(JSON.stringify(data))), (byte) => String.fromCharCode(byte)).join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
+
+{
+  const state: AppState = {
+    personas: ["Ana", "Luis"],
+    movimientos: [
+      { tipo: "gasto", descripcion: "Cena", pagador: "Ana", monto: 100, categoria: "comida", participantes: ["Ana", "Luis"] },
+      { tipo: "transferencia", de: "Luis", a: "Ana", monto: 50 },
+    ],
+  }
+  assert.deepEqual(decodeShareState(encodeShareState(state)), state)
+  assert.throws(() => decodeShareState("payload-invalido"), /No se pudo abrir/)
+}
+
+{
+  const legacy = { personas: ["Ana"], movimientos: [{ tipo: "gasto", pagador: "Ana", monto: 10, participantes: ["Ana"] }] } as unknown as AppState
+  assert.equal(decodeShareState(encodeShareState(legacy)).movimientos[0]?.tipo, "gasto")
+  assert.equal((decodeShareState(encodeShareState(legacy)).movimientos[0] as Extract<Movimiento, { tipo: "gasto" }>).categoria, "otros")
+  assert.throws(() => decodeShareState(payloadShare({ v: 2, personas: ["Ana"], movimientos: [] })), /No se pudo abrir/)
+}
 
 {
   assert.deepEqual(getGastosPorCategoria([

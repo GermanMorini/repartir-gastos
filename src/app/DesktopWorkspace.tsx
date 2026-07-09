@@ -1,8 +1,9 @@
-import { ArrowLeftIcon, ArrowRightIcon, ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, PieChartIcon, ReceiptTextIcon, SearchIcon, SettingsIcon, UsersIcon } from "lucide-react"
+import { ArrowUpRightIcon, ChevronRightIcon, CopyIcon, PieChartIcon, SearchIcon, SettingsIcon, ShareIcon, UsersIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { ConfirmDialog } from "../components/shared/ConfirmDialog"
 import { CategoriaIcon, CategoryBadge } from "../components/shared/CategoryBadge"
+import { PersonSummaryDesktopView } from "../features/person-summary/PersonSummary"
 import { PersonaForm } from "../sections/personas/PersonaForm"
 import { PersonaItem } from "../sections/personas/PersonaItem"
 import { CategoryDetailList, CategoryPie } from "../sections/total/CategoryChart"
@@ -13,21 +14,6 @@ import type { Movimiento, Persona, ResumenCategoria, SaldoPersona, Transferencia
 import { Badge, Button, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
 
 type DesktopSection = "personas" | "movimientos" | "resumen"
-type DetailView = "cards" | "parte" | "pago" | "recibido" | "transferido"
-type ResumenPersona = {
-  persona: Persona
-  totalPuesto: number
-  totalLeTocaba: number
-  totalTransferido: number
-  totalRecibido: number
-  totalSalioBolsillo: number
-  saldo: number
-  gastosDondeParticipo: { movimiento: Extract<Movimiento, { tipo: "gasto" }>; montoParte: number }[]
-  gastosQuePago: Extract<Movimiento, { tipo: "gasto" }>[]
-  transferenciasEnviadas: Extract<Movimiento, { tipo: "transferencia" }>[]
-  transferenciasRecibidas: Extract<Movimiento, { tipo: "transferencia" }>[]
-}
-
 type DesktopWorkspaceProps = {
   personas: Persona[]
   nombre: string
@@ -48,8 +34,8 @@ type DesktopWorkspaceProps = {
   onEditMovimiento: (index: number, movimiento: Movimiento) => void
   onCopyMovimientos: () => void
   nombreMovimiento: (movimiento: Movimiento) => string
-  getResumenPersona: (persona: Persona) => ResumenPersona
   onShareReparto: () => void
+  onShareLink: () => void
   gastoForm: ReactNode
   transferenciaForm: ReactNode
 }
@@ -73,16 +59,6 @@ function Pagination({ page, totalPages, onPage }: { page: number; totalPages: nu
       <Button className="btn-outline" disabled={page <= 1} onClick={() => onPage(page - 1)} type="button">←</Button>
       <span>{page} de {totalPages}</span>
       <Button className="btn-outline" disabled={page >= totalPages} onClick={() => onPage(page + 1)} type="button">→</Button>
-    </div>
-  )
-}
-
-function DetailList({ title, children, onBack }: { title: string; children: ReactNode; onBack: () => void }) {
-  return (
-    <div className="desktop-person-detail-list">
-      <Button className="btn-outline" onClick={onBack} type="button"><ChevronLeftIcon data-icon="inline-start" />Volver</Button>
-      <h3>{title}</h3>
-      <div className="desktop-detail-rows">{children}</div>
     </div>
   )
 }
@@ -144,8 +120,8 @@ export function DesktopWorkspace({
   onEditMovimiento,
   onCopyMovimientos,
   nombreMovimiento,
-  getResumenPersona,
   onShareReparto,
+  onShareLink,
   gastoForm,
   transferenciaForm,
 }: DesktopWorkspaceProps) {
@@ -160,7 +136,6 @@ export function DesktopWorkspace({
   const [summarySearch, setSummarySearch] = useState("")
   const [summarySort, setSummarySort] = useState("nombre")
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null)
-  const [detailView, setDetailView] = useState<DetailView>("cards")
 
   const filteredMovements = useMemo(() => {
     const text = movementSearch.trim().toLowerCase()
@@ -200,8 +175,6 @@ export function DesktopWorkspace({
   const currentSummaryPage = Math.min(summaryPage, summaryTotalPages)
   const pagedMovements = filteredMovements.slice((currentMovementPage - 1) * pageSize, currentMovementPage * pageSize)
   const pagedSaldos = filteredSaldos.slice((currentSummaryPage - 1) * pageSize, currentSummaryPage * pageSize)
-  const resumen = selectedPersona ? getResumenPersona(selectedPersona) : null
-
   const navItems = [
     { section: "personas" as const, label: "Personas", meta: `${personas.length} personas`, icon: UsersIcon },
     { section: "movimientos" as const, label: "Movimientos", meta: `${movimientos.length} movimientos`, icon: ArrowUpRightIcon },
@@ -219,7 +192,7 @@ export function DesktopWorkspace({
           {navItems.map((item) => {
             const Icon = item.icon
             return (
-              <button className={`desktop-sidebar-item ${desktopSection === item.section ? `active active-${item.section}` : ""}`} key={item.section} onClick={() => { setDesktopSection(item.section); setSelectedPersona(null); setDetailView("cards") }} type="button">
+              <button className={`desktop-sidebar-item ${desktopSection === item.section ? `active active-${item.section}` : ""}`} key={item.section} onClick={() => { setDesktopSection(item.section); setSelectedPersona(null) }} type="button">
                 <Icon />
                 <span>{item.label}<small>{item.meta}</small></span>
               </button>
@@ -266,6 +239,7 @@ export function DesktopWorkspace({
               <div className="desktop-mini-totals"><span>Total gastado<strong>{formatoARS.format(totalGastado)}</strong></span><span>Promedio por persona<strong>{formatoARS.format(promedio)}</strong></span></div>
               <CategoryPie data={gastosPorCategoria} />
               <CategoryDetailList data={gastosPorCategoria} />
+              <Button className="btn-outline" onClick={onShareLink} type="button"><ShareIcon data-icon="inline-start" />Compartir resumen</Button>
               <RepartirDialog open={settlementOpen} onOpenChange={onSettlementOpenChange} pendientes={pendientes} resumenCopiable={resumenCopiable} onShare={onShareReparto} />
             </div>
           </>
@@ -322,7 +296,7 @@ export function DesktopWorkspace({
 
         {desktopSection === "resumen" ? (
           <section className="desktop-content-card">
-            {!resumen ? (
+            {!selectedPersona ? (
               <>
                 <div className="desktop-content-head"><div><h2>Saldos por persona</h2><p>{filteredSaldos.length} personas</p></div></div>
                 <ScrollArea className="desktop-scroll-list">
@@ -330,7 +304,7 @@ export function DesktopWorkspace({
                     {pagedSaldos.map((saldo) => {
                       const estado = estadoSaldo(saldo.saldo)
                       return (
-                        <button className="desktop-summary-row" key={saldo.persona} onClick={() => { setSelectedPersona(saldo.persona); setDetailView("cards") }} type="button">
+                        <button className="desktop-summary-row" key={saldo.persona} onClick={() => setSelectedPersona(saldo.persona)} type="button">
                           <span className={`avatar ${saldo.saldo > 0 ? "avatar-positive" : ""}`}>{iniciales(saldo.persona)}</span>
                           <strong>{saldo.persona}</strong>
                           <span><small>Parte</small>{formatoARS.format(saldo.totalDebidoEnGastos)}</span>
@@ -348,31 +322,7 @@ export function DesktopWorkspace({
                   <Pagination page={currentSummaryPage} totalPages={summaryTotalPages} onPage={setSummaryPage} />
                 </div>
               </>
-            ) : (
-              <div className="desktop-person-detail">
-                <aside className="desktop-person-side">
-                  <Button className="btn-outline" onClick={() => setSelectedPersona(null)} type="button"><ChevronLeftIcon data-icon="inline-start" />Volver al listado</Button>
-                  <span className="desktop-person-avatar">{iniciales(resumen.persona)}</span>
-                  <h3>{resumen.persona}</h3>
-                  <Badge className={estadoSaldo(resumen.saldo).className}>{estadoSaldo(resumen.saldo).label}</Badge>
-                  <span>Parte<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></span>
-                  <span>Gastó<strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></span>
-                  <span>Saldo<strong className={estadoSaldo(resumen.saldo).className}>{formatoARS.format(resumen.saldo)}</strong></span>
-                </aside>
-                <div className={`desktop-person-detail-panel show-${detailView}`}>
-                  <div className="desktop-detail-cards">
-                    <button onClick={() => setDetailView("parte")} type="button"><ReceiptTextIcon /><span>Su parte de los gastos<small>Total de su participación</small></span><strong>{formatoARS.format(resumen.totalLeTocaba)}</strong><ChevronRightIcon /></button>
-                    <button onClick={() => setDetailView("pago")} type="button"><ArrowUpRightIcon /><span>Lo que pagó<small>Total que pagó por todos</small></span><strong>{formatoARS.format(resumen.totalPuesto)}</strong><ChevronRightIcon /></button>
-                    <button onClick={() => setDetailView("recibido")} type="button"><ArrowLeftIcon /><span>Lo que le transfirieron<small>Pagos que recibió</small></span><strong>{formatoARS.format(resumen.totalRecibido)}</strong><ChevronRightIcon /></button>
-                    <button onClick={() => setDetailView("transferido")} type="button"><ArrowRightIcon /><span>Lo que transfirió<small>Pagos que hizo</small></span><strong>{formatoARS.format(resumen.totalTransferido)}</strong><ChevronRightIcon /></button>
-                  </div>
-                  {detailView === "parte" ? <DetailList title="Gastos donde participó" onBack={() => setDetailView("cards")}>{resumen.gastosDondeParticipo.map(({ movimiento, montoParte }) => <p key={`${movimiento.descripcion}-${movimiento.monto}`}><span>{movimiento.descripcion || "Gasto"}</span><strong>{formatoARS.format(montoParte)} <small>de {formatoARS.format(movimiento.monto)}</small></strong></p>)}</DetailList> : null}
-                  {detailView === "pago" ? <DetailList title="Gastos que pagó" onBack={() => setDetailView("cards")}>{resumen.gastosQuePago.map((movimiento) => <p key={`${movimiento.descripcion}-${movimiento.monto}`}><span>{movimiento.descripcion || "Gasto"}</span><strong>{formatoARS.format(movimiento.monto)}</strong></p>)}</DetailList> : null}
-                  {detailView === "recibido" ? <DetailList title="Pagos recibidos" onBack={() => setDetailView("cards")}>{resumen.transferenciasRecibidas.map((movimiento) => <p key={`${movimiento.de}-${movimiento.monto}`}><span>Recibió de {movimiento.de}</span><strong>{formatoARS.format(movimiento.monto)}</strong></p>)}</DetailList> : null}
-                  {detailView === "transferido" ? <DetailList title="Pagos realizados" onBack={() => setDetailView("cards")}>{resumen.transferenciasEnviadas.map((movimiento) => <p key={`${movimiento.a}-${movimiento.monto}`}><span>Pagó a {movimiento.a}</span><strong>{formatoARS.format(movimiento.monto)}</strong></p>)}</DetailList> : null}
-                </div>
-              </div>
-            )}
+            ) : <PersonSummaryDesktopView initialPersona={selectedPersona} movimientos={movimientos} onBack={() => setSelectedPersona(null)} personas={personas} />}
           </section>
         ) : null}
       </main>

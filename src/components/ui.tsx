@@ -28,6 +28,14 @@ export function Card({ className, ...props }: ComponentProps<"section">) {
   return <section className={cn("card", className)} {...props} />
 }
 
+export function Avatar({ className, ...props }: ComponentProps<"span">) {
+  return <span className={cn("avatar", className)} {...props} />
+}
+
+export function AvatarFallback({ className, ...props }: ComponentProps<"span">) {
+  return <span className={className} {...props} />
+}
+
 export type CarouselApi = UseEmblaCarouselType[1]
 type CarouselContextValue = {
   carouselRef: UseEmblaCarouselType[0]
