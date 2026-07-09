@@ -85,9 +85,11 @@
 .person-carousel-arrow {
   min-width: 3.25rem;
   min-height: 3.25rem;
-  background: #6d28d9;
   border-color: #6d28d9;
+  border-radius: 8px;
+  background: #6d28d9;
   color: #fff;
+  box-shadow: none;
   padding: 0;
 }
 
@@ -124,20 +126,23 @@
 
 .ps-stats > div {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
 }
 
 .ps-stats span {
-  display: grid;
-  gap: 0.55rem;
-  border-left: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border);
   color: #536078;
-  padding: 0 0.75rem;
+  padding-top: 0.65rem;
   font-weight: 800;
 }
 
 .ps-stats span:first-child {
-  border-left: 0;
+  border-top: 0;
+  padding-top: 0;
 }
 
 .ps-stats strong,
@@ -190,9 +195,58 @@
   color: var(--primary);
 }
 
-.ps-tabs .tabs-list {
-  overflow-x: auto;
-  margin-bottom: 1rem;
+.ps-card-list .ps-detail-button:nth-child(1) .ps-detail-icon {
+  background: #dcfce7;
+  color: #008f45;
+}
+
+.ps-card-list .ps-detail-button:nth-child(2) .ps-detail-icon {
+  background: #fff4d6;
+  color: #f59e0b;
+}
+
+.ps-card-list .ps-detail-button:nth-child(3) .ps-detail-icon {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.ps-card-list .ps-detail-button:nth-child(4) .ps-detail-icon {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.ps-detail-parte {
+  --detail-color: #008f45;
+  --detail-bg: #dcfce7;
+}
+
+.ps-detail-pago {
+  --detail-color: #f59e0b;
+  --detail-bg: #fff4d6;
+}
+
+.ps-detail-recibido {
+  --detail-color: #7c3aed;
+  --detail-bg: #ede9fe;
+}
+
+.ps-detail-transferido {
+  --detail-color: #2563eb;
+  --detail-bg: #dbeafe;
+}
+
+.ps-mobile-page .ps-detail-button {
+  grid-template-columns: 2.75rem minmax(0, 1fr) 1rem;
+}
+
+.ps-mobile-page .ps-detail-button small,
+.ps-mobile-page .ps-detail-button b {
+  display: none;
+}
+
+.ps-mobile-page .ps-detail-button .ps-detail-icon {
+  background: var(--detail-bg);
+  color: var(--detail-color);
 }
 
 .ps-detail-list {
@@ -220,6 +274,116 @@
 
 .ps-detail-scroll .scroll-area-viewport {
   max-height: 21rem;
+}
+
+.ps-part-row {
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto !important;
+}
+
+.ps-row-icon {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #008f45;
+}
+
+.ps-part-row b {
+  display: grid;
+  justify-items: end;
+}
+
+.ps-part-row b small {
+  color: #667085;
+  font-size: 0.78rem;
+  font-style: italic;
+  font-weight: 700;
+}
+
+@keyframes ps-detail-open {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ps-detail-close {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.ps-mobile-page .ps-detail-list {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  background: #f8fafc;
+  animation: ps-detail-open 180ms ease-out;
+}
+
+.ps-mobile-page .ps-detail-list.is-closing {
+  animation: ps-detail-close 180ms ease-in forwards;
+}
+
+.ps-mobile-page .ps-detail-list > .btn {
+  width: fit-content;
+  margin: max(0.85rem, env(safe-area-inset-top)) 1rem 0;
+}
+
+.ps-mobile-page .ps-detail-list header {
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 0.25rem;
+  padding: 1.15rem 1rem 0.95rem;
+}
+
+.ps-mobile-page .ps-detail-list header strong {
+  font-size: 1.45rem;
+}
+
+.ps-mobile-page .ps-detail-list header small {
+  font-style: italic;
+}
+
+.ps-mobile-page .ps-detail-list header b {
+  color: var(--detail-color);
+  font-size: 1.65rem;
+}
+
+.ps-mobile-page .ps-detail-scroll {
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+}
+
+.ps-mobile-page .ps-detail-scroll .scroll-area-viewport {
+  height: 100%;
+  max-height: none;
+  overflow-y: scroll;
+  scrollbar-width: auto;
+}
+
+.ps-mobile-page .ps-detail-scroll .scroll-area-viewport::-webkit-scrollbar {
+  width: 0.45rem;
+}
+
+.ps-mobile-page .ps-detail-scroll .scroll-area-viewport::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #cbd5e1;
 }
 
 .positive {

@@ -7,7 +7,7 @@ import * as SelectPrimitive from "@radix-ui/react-select"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 import useEmblaCarousel from "embla-carousel-react"
 import type { UseEmblaCarouselType } from "embla-carousel-react"
-import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react"
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import type { ComponentProps, ReactNode } from "react"
 import { cn } from "../lib/utils"
@@ -103,12 +103,12 @@ export function CarouselItem({ className, ...props }: ComponentProps<"div">) {
 
 export function CarouselPrevious({ className, ...props }: ComponentProps<"button">) {
   const { canScrollPrev, scrollPrev } = useCarousel()
-  return <Button className={cn("carousel-button", className)} disabled={!canScrollPrev} onClick={scrollPrev} type="button" {...props}>←</Button>
+  return <Button className={cn("carousel-button", className)} disabled={!canScrollPrev} onClick={scrollPrev} type="button" {...props}><ChevronLeftIcon /></Button>
 }
 
 export function CarouselNext({ className, ...props }: ComponentProps<"button">) {
   const { canScrollNext, scrollNext } = useCarousel()
-  return <Button className={cn("carousel-button", className)} disabled={!canScrollNext} onClick={scrollNext} type="button" {...props}>→</Button>
+  return <Button className={cn("carousel-button", className)} disabled={!canScrollNext} onClick={scrollNext} type="button" {...props}><ChevronRightIcon /></Button>
 }
 
 export function Table({ className, ...props }: ComponentProps<"table">) {

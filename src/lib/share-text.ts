@@ -26,11 +26,11 @@ export function textoResumenPersona(resumen: ResumenPersona) {
   ]
 
   return [
-    `Este es tu resumen de gastos:`,
-    `- Te tocaba gastar: ${formatoARS.format(resumen.totalLeTocaba)}`,
-    `- Ya pagaste: ${formatoARS.format(resumen.totalSalioBolsillo)}`,
-    `- Recibiste: ${formatoARS.format(resumen.totalRecibido)}`,
-    `- Total: ${resultadoCopiable(resumen)}`,
+    `Hoja de liquidación de ${resumen.persona}:`,
+    `- Le tocaba gastar: ${formatoARS.format(resumen.totalLeTocaba)}`,
+    `- Ya pagó: ${formatoARS.format(resumen.totalSalioBolsillo)}`,
+    `- Recibió: ${formatoARS.format(resumen.totalRecibido)}`,
+    `- Saldo: ${resultadoCopiable(resumen)}`,
     ...(detalle.length ? ["", "Detalle:", ...detalle] : []),
   ].join("\n")
 }

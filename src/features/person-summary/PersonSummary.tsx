@@ -1,9 +1,9 @@
-import { ArrowDownLeftIcon, ArrowLeftIcon, ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, ReceiptTextIcon, ShareIcon, UsersIcon, WalletCardsIcon } from "lucide-react"
+import { ArrowDownLeftIcon, ArrowLeftIcon, ArrowUpRightIcon, ChartPie, ChevronLeftIcon, ChevronRightIcon, ShareIcon, UsersIcon, WalletCardsIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
-import { CategoryBadge } from "../../components/shared/CategoryBadge"
+import { CategoriaIcon } from "../../components/shared/CategoryBadge"
 import { SlidingText } from "../../components/shared/SlidingText"
-import { Avatar, AvatarFallback, Badge, Button, Card, Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, ScrollArea, Separator, Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui"
+import { Avatar, AvatarFallback, Badge, Button, Card, Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, ScrollArea, Separator } from "../../components/ui"
 import type { CarouselApi } from "../../components/ui"
 import { getResumenPersona } from "../../lib/calculos"
 import { formatoARS } from "../../lib/money"
@@ -92,17 +92,18 @@ function SummaryStats({ resumen }: { resumen: ResumenPersona }) {
     <Card className="ps-stats">
       <h2>Resumen de {resumen.persona} <Badge className={estado.className}>{estado.label}</Badge></h2>
       <div>
-        <span>Parte (lo que le corresponde)<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></span>
-        <span>Gastó (pagó + transfirió)<strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></span>
+        <span>Le tocaba gastar<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></span>
+        <span>Gastó<strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></span>
+        <span>Ya recibió<strong>{formatoARS.format(resumen.totalRecibido)}</strong></span>
         <span>Saldo<strong className={estado.className}>{formatoARS.format(resumen.saldo)}</strong></span>
       </div>
     </Card>
   )
 }
 
-function DetailButton({ icon, title, subtitle, amount, onClick }: { icon: ReactNode; title: string; subtitle: string; amount: number; onClick?: () => void }) {
+function DetailButton({ icon, title, subtitle, amount, view, onClick }: { icon: ReactNode; title: string; subtitle: string; amount: number; view: DetailView; onClick?: () => void }) {
   return (
-    <button className="ps-detail-button" onClick={onClick} type="button">
+    <button className={`ps-detail-button ps-detail-${view}`} onClick={onClick} type="button">
       <span className="ps-detail-icon">{icon}</span>
       <span><strong>{title}</strong><small>{subtitle}</small></span>
       <b>{formatoARS.format(amount)}</b>
@@ -114,10 +115,10 @@ function DetailButton({ icon, title, subtitle, amount, onClick }: { icon: ReactN
 function PersonSummaryCards({ resumen, onOpen }: { resumen: ResumenPersona; onOpen?: (view: DetailView) => void }) {
   return (
     <div className="ps-card-list">
-      <DetailButton icon={<ReceiptTextIcon />} title="Su parte de los gastos" subtitle="Lo que le corresponde de cada gasto" amount={resumen.totalLeTocaba} onClick={() => onOpen?.("parte")} />
-      <DetailButton icon={<WalletCardsIcon />} title="Lo que pagó" subtitle="Gastos que pagó" amount={resumen.totalPuesto} onClick={() => onOpen?.("pago")} />
-      <DetailButton icon={<ArrowDownLeftIcon />} title="Lo que le transfirieron" subtitle="Transferencias que recibió" amount={resumen.totalRecibido} onClick={() => onOpen?.("recibido")} />
-      <DetailButton icon={<ArrowUpRightIcon />} title="Lo que transfirió" subtitle="Transferencias que envió" amount={resumen.totalTransferido} onClick={() => onOpen?.("transferido")} />
+      <DetailButton icon={<ChartPie />} title="Su parte de los gastos" subtitle="Lo que le corresponde de cada gasto" amount={resumen.totalLeTocaba} view="parte" onClick={() => onOpen?.("parte")} />
+      <DetailButton icon={<WalletCardsIcon />} title="Lo que pagó" subtitle="Gastos que pagó" amount={resumen.totalPuesto} view="pago" onClick={() => onOpen?.("pago")} />
+      <DetailButton icon={<ArrowDownLeftIcon />} title="Lo que le transfirieron" subtitle="Transferencias que recibió" amount={resumen.totalRecibido} view="recibido" onClick={() => onOpen?.("recibido")} />
+      <DetailButton icon={<ArrowUpRightIcon />} title="Lo que transfirió" subtitle="Transferencias que envió" amount={resumen.totalTransferido} view="transferido" onClick={() => onOpen?.("transferido")} />
     </div>
   )
 }
@@ -126,12 +127,12 @@ function DetailRows({ resumen, view }: { resumen: ResumenPersona; view: DetailVi
   if (view === "parte") return (
     <>
       {resumen.gastosDondeParticipo.map(({ movimiento, montoParte }, index) => (
-        <p key={`${view}-${index}`}><span><strong>{nombreMovimiento(movimiento)}</strong><small>{movimiento.pagador} (pagó)</small></span><b>{formatoARS.format(montoParte)} <small>de {formatoARS.format(movimiento.monto)}</small></b></p>
+        <p className="ps-part-row" key={`${view}-${index}`}><span className="ps-row-icon"><CategoriaIcon categoria={movimiento.categoria} /></span><span><strong>{nombreMovimiento(movimiento)}</strong></span><b>{formatoARS.format(montoParte)} <small>(de {formatoARS.format(movimiento.monto)})</small></b></p>
       ))}
     </>
   )
   if (view === "pago") return (
-    <>{resumen.gastosQuePago.map((movimiento, index) => <p key={`${view}-${index}`}><span><strong>{nombreMovimiento(movimiento)}</strong><CategoryBadge categoria={movimiento.categoria} /></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}</>
+    <>{resumen.gastosQuePago.map((movimiento, index) => <p className="ps-part-row" key={`${view}-${index}`}><span className="ps-row-icon"><CategoriaIcon categoria={movimiento.categoria} /></span><span><strong>{nombreMovimiento(movimiento)}</strong></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}</>
   )
   if (view === "recibido") return (
     <>{resumen.transferenciasRecibidas.map((movimiento, index) => <p key={`${view}-${index}`}><span><strong>De {movimiento.de}</strong></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}</>
@@ -141,7 +142,7 @@ function DetailRows({ resumen, view }: { resumen: ResumenPersona; view: DetailVi
   )
 }
 
-function DetailList({ resumen, view, onBack }: { resumen: ResumenPersona; view: DetailView; onBack?: () => void }) {
+function DetailList({ resumen, view, onBack, closing = false }: { resumen: ResumenPersona; view: DetailView; onBack?: () => void; closing?: boolean }) {
   const titles = {
     parte: ["Su parte de los gastos", "Lo que le corresponde de cada gasto", resumen.totalLeTocaba],
     pago: ["Lo que pagó", "Gastos que pagó", resumen.totalPuesto],
@@ -151,7 +152,7 @@ function DetailList({ resumen, view, onBack }: { resumen: ResumenPersona; view: 
   const [title, subtitle, amount] = titles[view]
 
   return (
-    <Card className="ps-detail-list">
+    <Card className={`ps-detail-list ps-detail-${view}${closing ? " is-closing" : ""}`}>
       {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ChevronLeftIcon />Volver</Button> : null}
       <header><strong>{title}</strong><small>{subtitle}</small><b>{formatoARS.format(amount)}</b></header>
       <Separator />
@@ -167,7 +168,15 @@ function DetailList({ resumen, view, onBack }: { resumen: ResumenPersona; view: 
 
 export function PersonSummaryMobilePage({ personas, movimientos, initialPersona, readOnly = false, title = "Hoja de liquidación", onBack, onShare }: PersonSummaryProps) {
   const [selected, setSelected] = useSelectedPersona(personas, initialPersona)
+  const [detail, setDetail] = useState<DetailView | "cards">("cards")
+  const [closingDetail, setClosingDetail] = useState(false)
   const resumen = useMemo(() => getResumenPersona(selected, movimientos), [movimientos, selected])
+  useEffect(() => { setDetail("cards"); setClosingDetail(false) }, [selected])
+  const openDetail = (view: DetailView) => { setClosingDetail(false); setDetail(view) }
+  const closeDetail = () => {
+    setClosingDetail(true)
+    window.setTimeout(() => { setDetail("cards"); setClosingDetail(false) }, 180)
+  }
 
   if (!selected) return null
   return (
@@ -180,20 +189,7 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
       <ScrollArea className="ps-mobile-scroll">
         <PersonCarousel personas={personas} selected={selected} onSelect={setSelected} />
         <SummaryStats resumen={resumen} />
-        <Tabs className="ps-tabs" defaultValue="resumen">
-          <TabsList className="tabs-list">
-            <TabsTrigger className="tabs-trigger" value="resumen">Resumen</TabsTrigger>
-            <TabsTrigger className="tabs-trigger" value="parte">Su parte</TabsTrigger>
-            <TabsTrigger className="tabs-trigger" value="pago">Pagó</TabsTrigger>
-            <TabsTrigger className="tabs-trigger" value="recibido">Recibió</TabsTrigger>
-            <TabsTrigger className="tabs-trigger" value="transferido">Transfirió</TabsTrigger>
-          </TabsList>
-          <TabsContent value="resumen"><PersonSummaryCards resumen={resumen} /></TabsContent>
-          <TabsContent value="parte"><DetailList resumen={resumen} view="parte" /></TabsContent>
-          <TabsContent value="pago"><DetailList resumen={resumen} view="pago" /></TabsContent>
-          <TabsContent value="recibido"><DetailList resumen={resumen} view="recibido" /></TabsContent>
-          <TabsContent value="transferido"><DetailList resumen={resumen} view="transferido" /></TabsContent>
-        </Tabs>
+        {detail === "cards" ? <PersonSummaryCards resumen={resumen} onOpen={openDetail} /> : <DetailList closing={closingDetail} resumen={resumen} view={detail} onBack={closeDetail} />}
       </ScrollArea>
     </main>
   )

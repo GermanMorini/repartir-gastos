@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, EraserIcon, PieChartIcon, SearchIcon, SettingsIcon, ShareIcon, UsersIcon } from "lucide-react"
+import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, EraserIcon, PieChartIcon, SearchIcon, ShareIcon, Shredder, UsersIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { ConfirmDialog } from "../components/shared/ConfirmDialog"
@@ -180,7 +180,7 @@ export function DesktopWorkspace({
           {navItems.map((item) => {
             const Icon = item.icon
             return (
-              <button className={`desktop-sidebar-item ${desktopSection === item.section ? `active active-${item.section}` : ""}`} key={item.section} onClick={() => { setDesktopSection(item.section); setSelectedPersona(null) }} type="button">
+              <button className={`desktop-sidebar-item nav-${item.section} ${desktopSection === item.section ? `active active-${item.section}` : ""}`} key={item.section} onClick={() => { setDesktopSection(item.section); setSelectedPersona(null) }} type="button">
                 <Icon />
                 <span>{item.label}<small>{item.meta}</small></span>
               </button>
@@ -189,7 +189,7 @@ export function DesktopWorkspace({
         </nav>
         <Separator />
         <ConfirmDialog title="Limpiar datos" description="Esto elimina todos los datos ingresados hasta el momento." confirmText="Limpiar datos" onConfirm={onClear}>
-          <button className="desktop-settings" type="button"><SettingsIcon />Limpiar datos</button>
+          <button className="desktop-settings" type="button"><Shredder />Limpiar datos</button>
         </ConfirmDialog>
       </aside>
 
