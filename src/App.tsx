@@ -1,18 +1,162 @@
 import { ArrowDownLeftIcon, ArrowUpRightIcon, BrushCleaningIcon, CalculatorIcon, CheckIcon, ChevronDownIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, Trash2Icon, UserIcon, UserPlusIcon, UsersIcon, WalletCardsIcon, XIcon } from "lucide-react"
+import { driver } from "driver.js"
+import type { DriveStep, Driver } from "driver.js"
 import { toPng } from "html-to-image"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { CSSProperties, ReactNode } from "react"
 import { toast, Toaster } from "sonner"
+import "driver.js/dist/driver.css"
 import { calcularSaldos, calcularTransferenciasPendientes, formatoARS, getGastosPorCategoria, getMatrizCalculos, getResumenPersona } from "./calculos"
 import { CATEGORIAS_GASTO, CATEGORIA_DEFAULT, getCategoria, getCategoriaOrden } from "./categories"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, Button, Card, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, Button, Card, Checkbox, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui"
 import { clearState, loadState, saveState } from "./storage"
-import type { CategoriaGasto, Movimiento, Persona, ResumenCategoria } from "./types"
+import type { AppState, CategoriaGasto, Movimiento, Persona, ResumenCategoria } from "./types"
 
 const sinSeleccion = ""
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
 type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
 type MobileSection = "personas" | "movimientos" | "resumen" | "total"
+type TutorialStepConfig = {
+  section: MobileSection
+  selector: string | (() => string)
+  fallback?: string
+  opensResumen?: Persona
+  opensCalculos?: boolean
+  opensGrafico?: boolean
+  opensSettlement?: boolean
+  title: string
+  description: string
+}
+
+const TUTORIAL_HIDDEN_KEY = "repartir-gastos:tutorial:hidden"
+const tutorialMockState = {
+  personas: ["Norberto", "Clara", "Estifen"],
+  movimientos: [
+    { tipo: "gasto", descripcion: "cena", pagador: "Norberto", monto: 98000, participantes: ["Norberto", "Clara", "Estifen"], categoria: "comida" },
+    { tipo: "gasto", descripcion: "uber", pagador: "Clara", monto: 6200, participantes: ["Norberto", "Clara", "Estifen"], categoria: "transporte" },
+    { tipo: "gasto", descripcion: "cena 2 + compras", pagador: "Clara", monto: 40800, participantes: ["Norberto", "Clara"], categoria: "comida" },
+    { tipo: "gasto", descripcion: "goldstar", pagador: "Estifen", monto: 66000, participantes: ["Norberto", "Clara", "Estifen"], categoria: "ocio" },
+    { tipo: "transferencia", descripcion: "transferencia", de: "Estifen", a: "Norberto", monto: 40000 },
+  ],
+} satisfies AppState
+
+const tutorialStepsConfig: TutorialStepConfig[] = [
+  {
+    section: "personas",
+    selector: "[data-tour='personas']",
+    title: "Añadí personas",
+    description: "Añadí las personas entre quienes se tienen que repartir los gastos",
+  },
+  {
+    section: "movimientos",
+    selector: "[data-tour='movimientos']",
+    title: "Añadí todos los gastos y transferencias",
+    description: "Escribí el nombre del gasto, el monto, quién pagó y entre quiénes se reparte. Podés añadir una categoría si querés",
+  },
+  {
+    section: "movimientos",
+    selector: () => (isMobileViewport() ? "[data-tour='copy-movimientos-mobile']" : "[data-tour='copy-movimientos-desktop']"),
+    fallback: "[data-tour='movimientos']",
+    title: "¿Falta algo?",
+    description: "Compartí esto con tus contactos para ver qué es lo que falta.",
+  },
+  {
+    section: "resumen",
+    selector: "[data-tour='resumen']",
+    title: "Revisá los cálculos",
+    description: "Tocá una persona para ver lo que tiene que gastar y lo que pagó.",
+  },
+  {
+    section: "resumen",
+    selector: "[data-tour='resumen-norberto-dialog']",
+    fallback: "[data-tour='resumen']",
+    opensResumen: "Norberto",
+    title: "Resumen de Norberto",
+    description: "Acá ves cuánto le tocaba gastar, cuánto pagó y su resultado final. Podés compartirlo con él para que sepa cuánto debe.",
+  },
+  {
+    section: "resumen",
+    selector: "[data-tour='calculos']",
+    fallback: "[data-tour='resumen']",
+    title: "¿No podés creer lo que debés?",
+    description: "Revisá los cálculos paso a paso para estar seguro",
+  },
+  {
+    section: "resumen",
+    selector: "[data-tour='calculos-dialog']",
+    fallback: "[data-tour='resumen']",
+    opensCalculos: true,
+    title: "Tabla de cálculos",
+    description: "Acá ves cómo cada movimiento cambia el saldo de cada persona.",
+  },
+  {
+    section: "total",
+    selector: "[data-tour='total']",
+    title: "Todo listo!",
+    description: "Tocá 'Repartir!' para saber quién le transfiere a quién",
+  },
+  {
+    section: "total",
+    selector: "[data-tour='grafico']",
+    fallback: "[data-tour='total']",
+    title: "¿No sabés en qué se gastó tanto?",
+    description: "Podés comparar categorías para saber en qué se fue la plata",
+  },
+  {
+    section: "total",
+    selector: "[data-tour='grafico-dialog']",
+    fallback: "[data-tour='total']",
+    opensGrafico: true,
+    title: "Gráfico por categoría",
+    description: "El gráfico muestra en qué categorías se concentró el gasto.",
+  },
+  {
+    section: "total",
+    selector: "[data-tour='repartir-dialog']",
+    fallback: "[data-tour='total']",
+    opensSettlement: true,
+    title: "Pasale esto a tus contactos",
+    description: "Compartile esto a los demás para que sepan cuánto deben",
+  },
+]
+
+function isMobileViewport() {
+  return typeof window !== "undefined" && matchMedia("(max-width: 719px)").matches
+}
+
+function nextPaint() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+}
+
+function tutorialHidden() {
+  try {
+    return localStorage.getItem(TUTORIAL_HIDDEN_KEY) === "1"
+  } catch {
+    return false
+  }
+}
+
+function hideTutorialForever() {
+  try {
+    localStorage.setItem(TUTORIAL_HIDDEN_KEY, "1")
+  } catch {
+    // Sin almacenamiento, solo se omite esta sesión.
+  }
+}
+
+function cloneTutorialState(): AppState {
+  return {
+    personas: [...tutorialMockState.personas],
+    movimientos: tutorialMockState.movimientos.map((movimiento) => (
+      movimiento.tipo === "gasto" ? { ...movimiento, participantes: [...movimiento.participantes] } : { ...movimiento }
+    )),
+  }
+}
+
+function getTutorialElement(step: TutorialStepConfig) {
+  const selector = typeof step.selector === "function" ? step.selector() : step.selector
+  return document.querySelector(selector) ?? (step.fallback ? document.querySelector(step.fallback) : null) ?? document.body
+}
 
 function SlidingText({ children, className = "" }: { children: ReactNode; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -144,11 +288,19 @@ export default function App() {
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
   const [detalleResumenAbierto, setDetalleResumenAbierto] = useState("")
   const [activeSection, setActiveSection] = useState<MobileSection>("personas")
+  const [tutorialDialogOpen, setTutorialDialogOpen] = useState(() => !tutorialHidden())
+  const [hideTutorial, setHideTutorial] = useState(false)
+  const [settlementOpen, setSettlementOpen] = useState(false)
+  const [resumenOpenPersona, setResumenOpenPersona] = useState<Persona | null>(null)
+  const [calculosOpen, setCalculosOpen] = useState(false)
+  const [graficoOpen, setGraficoOpen] = useState(false)
   const exportCategoriasRef = useRef<HTMLDivElement | null>(null)
   const calculosRef = useRef<HTMLDivElement | null>(null)
-  const resumenRef = useRef<HTMLDivElement | null>(null)
+  const tutorialDriverRef = useRef<Driver | null>(null)
+  const tutorialPreviousStateRef = useRef<AppState | null>(null)
 
   useEffect(() => saveState({ personas, movimientos }), [personas, movimientos])
+  useEffect(() => () => tutorialDriverRef.current?.destroy(), [])
 
   const movimientosCard = useMemo(
     () => movimientos
@@ -178,6 +330,130 @@ export default function App() {
   }
 
   const vistaMobile = (seccion: MobileSection) => `mobile-view ${activeSection === seccion ? "is-active" : ""}`
+
+  function cerrarTutorialDialog(open: boolean) {
+    if (open) {
+      setTutorialDialogOpen(true)
+      return
+    }
+    if (hideTutorial) hideTutorialForever()
+    setTutorialDialogOpen(false)
+  }
+
+  function omitirTutorial() {
+    if (hideTutorial) hideTutorialForever()
+    setTutorialDialogOpen(false)
+  }
+
+  async function prepararPasoTutorial(index: number) {
+    const step = tutorialStepsConfig[index]
+    if (!step) return
+    if (isMobileViewport()) {
+      setActiveSection(step.section)
+      window.scrollTo({ top: 0, behavior: "auto" })
+    }
+    setResumenOpenPersona(step.opensResumen ?? null)
+    setCalculosOpen(Boolean(step.opensCalculos))
+    setGraficoOpen(Boolean(step.opensGrafico))
+    setSettlementOpen(Boolean(step.opensSettlement))
+    await nextPaint()
+  }
+
+  function startTutorial() {
+    const steps: DriveStep[] = tutorialStepsConfig.map((step) => ({
+      element: () => getTutorialElement(step),
+      popover: {
+        title: step.title,
+        description: step.description,
+        side: "bottom",
+        align: "center",
+      },
+    }))
+    let moving = false
+    let guide: Driver
+
+    const moveTo = async (index: number, start = false) => {
+      if (moving) return
+      moving = true
+      try {
+        await prepararPasoTutorial(index)
+        if (start) guide.drive(index)
+        else guide.moveTo(index)
+      } finally {
+        moving = false
+      }
+    }
+
+    guide = driver({
+      steps,
+      showProgress: true,
+      progressText: "{{current}} de {{total}}",
+      nextBtnText: "Siguiente",
+      prevBtnText: "Anterior",
+      doneBtnText: "Finalizar",
+      showButtons: ["previous", "next", "close"],
+      popoverClass: "app-driver-popover",
+      stagePadding: 8,
+      stageRadius: 10,
+      onNextClick: (_element, _step, { driver: driverObj }) => {
+        const nextIndex = (driverObj.getActiveIndex() ?? 0) + 1
+        if (nextIndex >= steps.length) {
+          driverObj.destroy()
+          return
+        }
+        void moveTo(nextIndex)
+      },
+      onPrevClick: (_element, _step, { driver: driverObj }) => {
+        const prevIndex = (driverObj.getActiveIndex() ?? 0) - 1
+        if (prevIndex < 0) return
+        void moveTo(prevIndex)
+      },
+      onCloseClick: (_element, _step, { driver: driverObj }) => driverObj.destroy(),
+      onDoneClick: (_element, _step, { driver: driverObj }) => driverObj.destroy(),
+      onDestroyed: () => {
+        const previousState = tutorialPreviousStateRef.current
+        if (previousState) {
+          setPersonas(previousState.personas)
+          setMovimientos(previousState.movimientos)
+          saveState(previousState)
+          tutorialPreviousStateRef.current = null
+        }
+        setSettlementOpen(false)
+        setResumenOpenPersona(null)
+        setCalculosOpen(false)
+        setGraficoOpen(false)
+        tutorialDriverRef.current = null
+      },
+    })
+
+    tutorialDriverRef.current = guide
+    void moveTo(0, true)
+  }
+
+  async function iniciarTutorialConMockup() {
+    tutorialPreviousStateRef.current = { personas: [...personas], movimientos: movimientos.map((movimiento) => (
+      movimiento.tipo === "gasto" ? { ...movimiento, participantes: [...movimiento.participantes] } : { ...movimiento }
+    )) }
+    const state = cloneTutorialState()
+    saveState(state)
+    setPersonas(state.personas)
+    setMovimientos(state.movimientos)
+    setGasto({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [], categoria: CATEGORIA_DEFAULT })
+    setTransferencia({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
+    setActiveSection("personas")
+    setSettlementOpen(false)
+    setResumenOpenPersona(null)
+    setCalculosOpen(false)
+    setGraficoOpen(false)
+    setTutorialDialogOpen(false)
+    await nextPaint()
+    startTutorial()
+  }
+
+  async function aceptarTutorial() {
+    if (hideTutorial) hideTutorialForever()
+    await iniciarTutorialConMockup()
+  }
 
   function agregarPersona() {
     const limpia = nombre.trim()
@@ -319,6 +595,22 @@ export default function App() {
     ].join("\n").trim()
   }
 
+  async function compartirMovimientos() {
+    const texto = textoMovimientos()
+    try {
+      if (isMobileViewport() && navigator.share) {
+        await navigator.share({ title: "Movimientos", text: texto })
+        toast.success("Movimientos compartidos.")
+        return
+      }
+      await navigator.clipboard.writeText(texto)
+      toast.success("Movimientos copiados.")
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
+      toast.error("No se pudieron compartir los movimientos.")
+    }
+  }
+
   function descargarImagen(dataUrl: string, nombreArchivo = "gastos-por-categoria.png") {
     const link = document.createElement("a")
     link.href = dataUrl
@@ -344,16 +636,6 @@ export default function App() {
     } catch {
       toast.error("No se pudo exportar la imagen.")
     }
-  }
-
-  function textoMatrizCalculos() {
-    return [
-      ["Movimiento", ...personas].join("\t"),
-      ...matrizCalculos.map((fila) => [
-        `${fila.movimiento} (${formatoARS.format(fila.monto)})`,
-        ...personas.map((persona) => formatoSaldoMatriz(fila.saldos[persona] ?? 0)),
-      ].join("\t")),
-    ].join("\n")
   }
 
   async function exportarCalculosComoImagen() {
@@ -383,33 +665,34 @@ export default function App() {
     }
   }
 
-  async function exportarResumenComoImagen(persona: Persona) {
-    if (!resumenRef.current) return
+  async function compartirResumenReparto() {
     try {
-      setDetalleResumenAbierto("detalle")
-      await new Promise((resolve) => requestAnimationFrame(resolve))
-      resumenRef.current.classList.add("is-exporting")
-      await document.fonts?.ready
-      await new Promise((resolve) => requestAnimationFrame(resolve))
-      const dataUrl = await toPng(resumenRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: "#ffffff" })
-      const nombreArchivo = `resumen-${persona.toLowerCase().replace(/\s+/g, "-")}.png`
-      const esMobile = matchMedia("(max-width: 719px)").matches
-      if (esMobile) {
-        const blob = await fetch(dataUrl).then((respuesta) => respuesta.blob())
-        const file = new File([blob], nombreArchivo, { type: "image/png" })
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ title: `Resumen de ${persona}`, files: [file] })
-        } else {
-          descargarImagen(dataUrl, nombreArchivo)
-        }
-      } else {
-        descargarImagen(dataUrl, nombreArchivo)
+      if (isMobileViewport() && navigator.share) {
+        await navigator.share({ title: "Resumen de reparto", text: resumenCopiable })
+        toast.success("Resumen compartido.")
+        return
       }
-      toast.success("Imagen exportada.")
-    } catch {
-      toast.error("No se pudo exportar la imagen.")
-    } finally {
-      resumenRef.current?.classList.remove("is-exporting")
+      await navigator.clipboard.writeText(resumenCopiable)
+      toast.success("Resumen copiado.")
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
+      toast.error("No se pudo compartir el resumen.")
+    }
+  }
+
+  async function compartirResumenPersona(resumen: ReturnType<typeof getResumenPersona>) {
+    const texto = textoResumenPersona(resumen)
+    try {
+      if (isMobileViewport() && navigator.share) {
+        await navigator.share({ title: "Resumen de liquidación", text: texto })
+        toast.success("Resumen compartido.")
+        return
+      }
+      await navigator.clipboard.writeText(texto)
+      toast.success("Resumen copiado.")
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
+      toast.error("No se pudo compartir el resumen.")
     }
   }
 
@@ -453,6 +736,20 @@ export default function App() {
   return (
     <main className="app-bg">
       <Toaster richColors position="top-center" />
+      <Dialog open={tutorialDialogOpen} onOpenChange={cerrarTutorialDialog}>
+        <DialogContent className="tutorial-dialog">
+          <DialogTitle>¿Primera vez usando la app?</DialogTitle>
+          <DialogDescription>Podés hacer un tutorial guiado para no perderte.</DialogDescription>
+          <label className="tutorial-checkbox" htmlFor="hide-tutorial">
+            <Checkbox checked={hideTutorial} id="hide-tutorial" onCheckedChange={setHideTutorial} />
+            No mostrar más
+          </label>
+          <div className="dialog-actions">
+            <Button className="btn-outline" onClick={omitirTutorial} type="button">Ahora no</Button>
+            <Button onClick={() => void aceptarTutorial()} type="button">Aceptar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="export-offscreen">
         <div ref={exportCategoriasRef}>
           <CategoryChartShareCard data={gastosPorCategoria} fecha={fechaCategorias} total={totalGastado} />
@@ -485,7 +782,7 @@ export default function App() {
       <div className="app-grid">
         <div className="app-panel">
 
-          <section className={`app-section people-section ${vistaMobile("personas")}`} id="personas">
+          <section className={`app-section people-section ${vistaMobile("personas")}`} id="personas" data-tour="personas">
             <div className="section-head">
               <div className="section-title section-title-people">
                 <span className="section-icon"><UsersIcon /></span>
@@ -537,9 +834,12 @@ export default function App() {
                 <Input placeholder="Añadir persona por nombre o alias" value={nombre} onChange={(event) => setNombre(event.target.value)} onKeyDown={(event) => event.key === "Enter" && agregarPersona()} />
               </div>
             </div>
+            <p className="people-tutorial-hint">
+              ¿No sabés que hacer? haz <button onClick={() => void iniciarTutorialConMockup()} type="button">este</button> tutorial para comenzar
+            </p>
           </section>
 
-          <section className={`app-section movement-form ${vistaMobile("movimientos")}`} id="movimientos">
+          <section className={`app-section movement-form ${vistaMobile("movimientos")}`} id="movimientos" data-tour="movimientos">
             <div className="section-head movement-form-head">
               <div className="section-title section-title-movements">
                 <span className="section-icon"><ArrowUpRightIcon /></span>
@@ -550,7 +850,7 @@ export default function App() {
               </div>
               <div className="movement-head-actions">
                 <span className="muted">{movimientos.length} movimientos</span>
-                <Button className="movement-copy-button movement-copy-desktop" onClick={() => navigator.clipboard.writeText(textoMovimientos()).then(() => toast.success("Movimientos copiados."))} type="button">
+                <Button className="movement-copy-button movement-copy-desktop" data-tour="copy-movimientos-desktop" onClick={() => navigator.clipboard.writeText(textoMovimientos()).then(() => toast.success("Movimientos copiados."))} type="button">
                   <CopyIcon data-icon="inline-start" />
                   Copiar movimientos
                 </Button>
@@ -736,9 +1036,9 @@ export default function App() {
               </div>
             ) : null}
             {movimientos.length > 0 ? (
-              <Button className="movement-copy-button movement-copy-mobile" onClick={() => navigator.clipboard.writeText(textoMovimientos()).then(() => toast.success("Movimientos copiados."))} type="button">
-                <CopyIcon data-icon="inline-start" />
-                Copiar movimientos
+              <Button className="movement-copy-button movement-copy-mobile" data-tour="copy-movimientos-mobile" onClick={() => void compartirMovimientos()} type="button">
+                <ShareIcon data-icon="inline-start" />
+                Compartir
               </Button>
             ) : null}
             <Dialog open={edicion !== null} onOpenChange={(open) => !open && setEdicion(null)}>
@@ -863,7 +1163,7 @@ export default function App() {
         </div>
 
         <aside className="desktop-summary">
-          <Card className={`summary-card ${vistaMobile("resumen")}`} id="resumen">
+          <Card className={`summary-card ${vistaMobile("resumen")}`} id="resumen" data-tour="resumen">
             <div className="summary-head">
               <div className="section-title section-title-summary">
                 <span className="section-icon"><UsersIcon /></span>
@@ -876,14 +1176,14 @@ export default function App() {
                 </div>
               </div>
               <div className="summary-actions">
-                <Dialog>
+                <Dialog open={calculosOpen} onOpenChange={setCalculosOpen}>
                   <DialogTrigger asChild>
-                    <Button className="btn-france" type="button">
+                    <Button className="btn-france" data-tour="calculos" type="button">
                       <CalculatorIcon data-icon="inline-start" />
                       Cálculos
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="calculations-dialog">
+                  <DialogContent className="calculations-dialog" data-tour="calculos-dialog">
                     <div className="calculations-content" ref={calculosRef}>
                       <div className="calculations-head">
                         <div>
@@ -917,13 +1217,9 @@ export default function App() {
                       </ScrollArea>
                     </div>
                     <div className="dialog-actions">
-                      <Button className="btn-outline" onClick={() => navigator.clipboard.writeText(textoMatrizCalculos()).then(() => toast.success("Contenido copiado."))} type="button">
-                        <CopyIcon data-icon="inline-start" />
-                        Copiar contenido
-                      </Button>
                       <Button onClick={exportarCalculosComoImagen} type="button">
                         <DownloadIcon data-icon="inline-start" />
-                        Exportar imagen
+                        Compartir
                       </Button>
                     </div>
                   </DialogContent>
@@ -938,7 +1234,7 @@ export default function App() {
                 const pendiente = Math.round(resumen.saldo * 100) > 0 ? "Debe recibir" : Math.round(resumen.saldo * 100) < 0 ? "Debe pagar" : "Está al día"
 
                 return (
-                  <Dialog key={saldo.persona}>
+                  <Dialog key={saldo.persona} open={resumenOpenPersona === saldo.persona} onOpenChange={(open) => setResumenOpenPersona(open ? saldo.persona : null)}>
                     <DialogTrigger asChild>
                       <button className="summary-person" type="button">
                         <div className={resumen.saldo > 0 ? "avatar avatar-positive" : "avatar"}>{saldo.persona[0].toUpperCase()}</div>
@@ -949,24 +1245,20 @@ export default function App() {
                         </div>
                       </button>
                     </DialogTrigger>
-                    <DialogContent className="receipt-dialog">
+                    <DialogContent className="receipt-dialog" data-tour={saldo.persona === "Norberto" ? "resumen-norberto-dialog" : undefined}>
                       <ScrollArea className="receipt-scroll">
-                        <div className="receipt" ref={resumenRef}>
+                        <div className="receipt">
                           <header className="receipt-head">
                             <span className="receipt-avatar">{iniciales(saldo.persona)}</span>
                             <div>
                               <DialogTitle>Resumen de {saldo.persona}</DialogTitle>
                             </div>
                             <div className="receipt-actions">
-                              <Button className="btn-outline receipt-copy" onClick={() => navigator.clipboard.writeText(textoResumenPersona(resumen)).then(() => toast.success("Resumen copiado."))} type="button">
-                                <CopyIcon data-icon="inline-start" />
-                                Copiar resumen
-                              </Button>
-                              <Button className="receipt-export" onClick={() => exportarResumenComoImagen(saldo.persona)} type="button">
-                                <DownloadIcon className="receipt-export-desktop" data-icon="inline-start" />
-                                <ShareIcon className="receipt-export-mobile" data-icon="inline-start" />
-                                <span className="receipt-export-desktop">Exportar imagen</span>
-                                <span className="receipt-export-mobile">Compartir</span>
+                              <Button className="btn-outline receipt-copy" onClick={() => void compartirResumenPersona(resumen)} type="button">
+                                <CopyIcon className="receipt-copy-desktop" data-icon="inline-start" />
+                                <ShareIcon className="receipt-copy-mobile" data-icon="inline-start" />
+                                <span className="receipt-copy-desktop">Copiar resumen</span>
+                                <span className="receipt-copy-mobile">Compartir</span>
                               </Button>
                             </div>
                           </header>
@@ -1021,7 +1313,7 @@ export default function App() {
             </div>
           </Card>
 
-          <Card className={`totals-card ${vistaMobile("total")}`} id="totales">
+          <Card className={`totals-card ${vistaMobile("total")}`} id="totales" data-tour="total">
             <div className="totals-head">
               <div className="section-title section-title-total">
                 <span className="section-icon"><WalletCardsIcon /></span>
@@ -1030,14 +1322,14 @@ export default function App() {
                   <p>Resumen general del viaje.</p>
                 </div>
               </div>
-              <Dialog>
+              <Dialog open={graficoOpen} onOpenChange={setGraficoOpen}>
                 <DialogTrigger asChild>
-                  <Button className="btn-chart" type="button">
+                  <Button className="btn-chart" data-tour="grafico" type="button">
                     <PieChartIcon data-icon="inline-start" />
                     Gráfico
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="category-dialog">
+                <DialogContent className="category-dialog" data-tour="grafico-dialog">
                   <DialogTitle>Gastos por categoría</DialogTitle>
                   <DialogDescription>Compará cuánto se gastó en cada categoría.</DialogDescription>
                   <Card className="category-chart-card">
@@ -1064,8 +1356,8 @@ export default function App() {
                       Copiar resumen
                     </Button>
                     <Button onClick={exportarGraficoComoImagen} type="button">
-                      <DownloadIcon data-icon="inline-start" />
-                      Exportar imagen
+                      <ShareIcon data-icon="inline-start" />
+                      Compartir
                     </Button>
                   </div>
                 </DialogContent>
@@ -1081,11 +1373,11 @@ export default function App() {
                 <strong>{formatoARS.format(promedio)}</strong>
               </div>
             </div>
-            <Dialog>
+            <Dialog open={settlementOpen} onOpenChange={setSettlementOpen}>
               <DialogTrigger asChild>
                 <Button className="btn-primary settle-button" type="button">Repartir!</Button>
               </DialogTrigger>
-              <DialogContent className="settlement-dialog">
+              <DialogContent className="settlement-dialog" data-tour="repartir-dialog">
                 <div className="success-icon"><CheckIcon /></div>
                 <DialogTitle>¡Reparto completo!</DialogTitle>
                 <DialogDescription>
@@ -1109,9 +1401,11 @@ export default function App() {
                 <DialogClose asChild>
                   <Button className="settlement-ok" type="button">Entendido</Button>
                 </DialogClose>
-                <Button className="settlement-copy" onClick={() => navigator.clipboard.writeText(resumenCopiable).then(() => toast.success("Resumen copiado."))} type="button">
-                  <CopyIcon data-icon="inline-start" />
-                  Copiar resumen
+                <Button className="settlement-copy" onClick={() => void compartirResumenReparto()} type="button">
+                  <CopyIcon className="settlement-copy-desktop" data-icon="inline-start" />
+                  <ShareIcon className="settlement-copy-mobile" data-icon="inline-start" />
+                  <span className="settlement-copy-desktop">Copiar resumen</span>
+                  <span className="settlement-copy-mobile">Compartir</span>
                 </Button>
               </DialogContent>
             </Dialog>

@@ -148,6 +148,10 @@ h2 {
   font-weight: 700;
 }
 
+.people-tutorial-hint {
+  display: none;
+}
+
 .add-person-row button {
   display: inline-flex;
   min-height: 2.75rem;
@@ -1123,6 +1127,49 @@ h2 {
   gap: 0.75rem;
 }
 
+.tutorial-dialog {
+  width: min(92vw, 28rem);
+}
+
+.tutorial-checkbox {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--foreground);
+  font-weight: 650;
+}
+
+.app-driver-popover.driver-popover {
+  max-width: min(88vw, 22rem);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgb(15 23 32 / 0.22);
+}
+
+.app-driver-popover .driver-popover-title {
+  color: var(--foreground);
+  font-size: 1.05rem;
+}
+
+.app-driver-popover .driver-popover-description {
+  color: var(--muted-foreground);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.app-driver-popover .driver-popover-next-btn,
+.app-driver-popover .driver-popover-prev-btn {
+  border-radius: 8px;
+  text-shadow: none;
+}
+
+.app-driver-popover .driver-popover-next-btn {
+  border-color: #155eef;
+  background: #155eef;
+  color: #fff;
+}
+
 .receipt-dialog {
   width: min(94vw, 44rem);
   max-height: 92vh;
@@ -1207,16 +1254,11 @@ h2 {
   gap: 0.5rem;
 }
 
-.receipt-copy,
-.receipt-export {
+.receipt-copy {
   min-height: 2.75rem;
 }
 
-.receipt-export-mobile {
-  display: none;
-}
-
-.receipt.is-exporting .receipt-actions {
+.receipt-copy-mobile {
   display: none;
 }
 
@@ -1836,6 +1878,10 @@ h2 {
   color: var(--foreground);
 }
 
+.settlement-copy-mobile {
+  display: none;
+}
+
 @keyframes dialog-fade {
   from {
     opacity: 0;
@@ -2152,11 +2198,19 @@ h2 {
     flex: 1;
   }
 
-  .receipt-export-desktop {
+  .receipt-copy-desktop {
     display: none;
   }
 
-  .receipt-export-mobile {
+  .receipt-copy-mobile {
+    display: inline-flex;
+  }
+
+  .settlement-copy-desktop {
+    display: none;
+  }
+
+  .settlement-copy-mobile {
     display: inline-flex;
   }
 
@@ -2636,6 +2690,24 @@ body {
   .add-person-row button,
   .add-person {
     width: 100%;
+  }
+
+  .people-tutorial-hint {
+    display: block;
+    margin: 0.85rem 0 0;
+    color: var(--muted-foreground);
+    font-size: 0.92rem;
+    line-height: 1.4;
+  }
+
+  .people-tutorial-hint button {
+    border: 0;
+    background: transparent;
+    color: #155eef;
+    padding: 0;
+    text-decoration: underline;
+    font: inherit;
+    font-weight: 700;
   }
 
   .form-body {
