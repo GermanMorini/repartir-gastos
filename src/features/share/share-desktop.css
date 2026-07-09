@@ -2,12 +2,13 @@
   .share-page {
     height: 100dvh;
     overflow: auto;
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .share-desktop-actions {
     display: flex;
     justify-content: flex-end;
-    margin-bottom: 1rem;
+    width: min(100%, 74rem);
+    margin: 0 auto 0.5rem;
   }
 }

@@ -44,11 +44,23 @@
   margin-bottom: 1rem;
 }
 
+.person-carousel .carousel-viewport {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.person-carousel .carousel-content {
+  display: flex;
+}
+
+.person-carousel-item {
+  min-width: 0;
+  flex: 0 0 100%;
+}
+
 .person-carousel-track {
   display: flex;
-  gap: 0.75rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
+  min-width: 0;
 }
 
 .person-pill,
@@ -61,11 +73,19 @@
 
 .person-pill {
   display: grid;
-  min-width: 11rem;
+  width: 100%;
+  min-height: 7.25rem;
   place-items: center;
   gap: 0.2rem;
   padding: 0.85rem;
+  font-size: 1.2rem;
   scroll-snap-align: center;
+}
+
+.person-carousel-arrow {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
 }
 
 .person-pill.is-active,
@@ -109,7 +129,7 @@
 .ps-detail-button b,
 .ps-detail-list b {
   color: #101828;
-  font-size: 1.05rem;
+  font-size: 1.22rem;
   font-weight: 900;
 }
 
@@ -129,6 +149,7 @@
   background: #fff;
   color: var(--foreground);
   padding: 0.9rem;
+  font-size: 1.12rem;
   text-align: left;
 }
 
@@ -200,18 +221,26 @@
     min-height: 0;
     flex: 1;
     flex-direction: column;
-    gap: 1.2rem;
-    padding: 1.4rem;
+    width: min(100%, 74rem);
+    gap: 1rem;
+    margin: 0 auto;
+    padding: 0.75rem;
     overflow: auto;
+    font-size: 1.18rem;
   }
 
   .ps-desktop-head {
     text-align: center;
   }
 
+  .ps-desktop-head h2 {
+    font-size: 2.4rem;
+  }
+
   .ps-desktop-head p {
     margin: 0.35rem 0 0;
     color: #536078;
+    font-size: 1.18rem;
     font-weight: 800;
   }
 
@@ -246,8 +275,8 @@
 
   .ps-desktop-detail {
     display: grid;
-    min-height: 24rem;
-    grid-template-columns: 19rem minmax(0, 1fr);
+    min-height: 26rem;
+    grid-template-columns: 20rem minmax(0, 1fr);
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
@@ -262,7 +291,43 @@
     padding: 1.6rem;
   }
 
-  .ps-desktop-detail aside span {
+  .ps-desktop-detail aside > .avatar {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #dff2e4;
+    color: var(--primary);
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .ps-desktop-detail aside > h3 {
+    margin: 0;
+    color: #101828;
+    font-size: 1.85rem;
+    font-weight: 900;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .ps-desktop-detail aside > .badge {
+    background: rgb(0 122 53 / 0.12);
+    color: var(--primary);
+  }
+
+  .ps-desktop-detail aside > .badge.negative {
+    background: rgb(217 45 32 / 0.12);
+    color: #d92d20 !important;
+  }
+
+  .ps-desktop-detail aside > .badge.neutral {
+    background: rgb(83 96 120 / 0.12);
+    color: #536078 !important;
+  }
+
+  .ps-desktop-detail aside .ps-side-stat {
     display: grid;
     width: 100%;
     gap: 0.25rem;
@@ -272,9 +337,9 @@
     font-weight: 800;
   }
 
-  .ps-desktop-detail aside strong {
+  .ps-desktop-detail aside .ps-side-stat strong {
     color: #101828;
-    font-size: 1.35rem;
+    font-size: 1.75rem;
   }
 
   .ps-desktop-detail section {
@@ -282,12 +347,21 @@
   }
 
   .ps-big-avatar {
-    width: 5.5rem;
-    height: 5.5rem;
-    font-size: 2rem;
+    width: 6.25rem;
+    height: 6.25rem;
+    font-size: 2.4rem;
   }
 
   .ps-desktop-detail .ps-card-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ps-desktop-detail .ps-detail-button {
+    min-height: 5.25rem;
+  }
+
+  .ps-desktop-detail .ps-detail-list header,
+  .ps-desktop-detail .ps-detail-list p {
+    padding: 1.05rem 1.2rem;
   }
 }

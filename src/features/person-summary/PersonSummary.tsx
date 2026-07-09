@@ -2,8 +2,9 @@ import { ArrowDownLeftIcon, ArrowLeftIcon, ArrowUpRightIcon, ChevronLeftIcon, Ch
 import { useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { CategoryBadge } from "../../components/shared/CategoryBadge"
-import { Avatar, AvatarFallback, Badge, Button, Card, ScrollArea, Separator, Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui"
-import { calcularSaldos, getResumenPersona } from "../../lib/calculos"
+import { Avatar, AvatarFallback, Badge, Button, Card, Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, ScrollArea, Separator, Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui"
+import type { CarouselApi } from "../../components/ui"
+import { getResumenPersona } from "../../lib/calculos"
 import { formatoARS } from "../../lib/money"
 import { nombreMovimiento } from "../../lib/share-text"
 import type { Movimiento, Persona } from "../../types"
@@ -28,9 +29,9 @@ function iniciales(persona: Persona) {
 
 function estadoSaldo(saldo: number) {
   const centavos = Math.round(saldo * 100)
-  if (centavos > 0) return { label: "A favor", className: "positive", action: "Debería recibir" }
-  if (centavos < 0) return { label: "Debe", className: "negative", action: "Debería pagar" }
-  return { label: "Al día", className: "neutral", action: "Está al día" }
+  if (centavos > 0) return { label: "A favor", className: "positive" }
+  if (centavos < 0) return { label: "Debe", className: "negative" }
+  return { label: "Al día", className: "neutral" }
 }
 
 function useSelectedPersona(personas: Persona[], initialPersona?: Persona | null) {
@@ -44,23 +45,43 @@ function PersonAvatar({ persona, className = "" }: { persona: Persona; className
 }
 
 function PersonCarousel({ personas, selected, onSelect }: { personas: Persona[]; selected: Persona; onSelect: (persona: Persona) => void }) {
-  const index = Math.max(0, personas.indexOf(selected))
-  const move = (delta: number) => onSelect(personas[Math.min(personas.length - 1, Math.max(0, index + delta))] ?? selected)
+  const [api, setApi] = useState<CarouselApi>()
+
+  useEffect(() => {
+    if (!api) return
+    const sync = () => {
+      const persona = personas[api.selectedScrollSnap()]
+      if (persona) onSelect(persona)
+    }
+    api.on("select", sync)
+    api.on("reInit", sync)
+    return () => {
+      api.off("select", sync)
+      api.off("reInit", sync)
+    }
+  }, [api, onSelect, personas])
+
+  useEffect(() => {
+    const index = personas.indexOf(selected)
+    if (api && index >= 0 && api.selectedScrollSnap() !== index) api.scrollTo(index)
+  }, [api, personas, selected])
 
   return (
-    <div className="person-carousel">
-      <Button className="btn-outline" disabled={index <= 0} onClick={() => move(-1)} type="button"><ChevronLeftIcon /></Button>
-      <div className="person-carousel-track">
+    <Carousel className="person-carousel" setApi={setApi}>
+      <CarouselPrevious className="btn-outline person-carousel-arrow" />
+      <CarouselContent className="person-carousel-track">
         {personas.map((persona) => (
-          <button className={`person-pill ${persona === selected ? "is-active" : ""}`} key={persona} onClick={() => onSelect(persona)} type="button">
-            <PersonAvatar persona={persona} />
-            <strong>{persona}</strong>
-            <span>{personas.indexOf(persona) + 1} de {personas.length}</span>
-          </button>
+          <CarouselItem className="person-carousel-item" key={persona}>
+            <button className={`person-pill ${persona === selected ? "is-active" : ""}`} onClick={() => { onSelect(persona); api?.scrollTo(personas.indexOf(persona)) }} type="button">
+              <PersonAvatar persona={persona} />
+              <strong>{persona}</strong>
+              <span>{personas.indexOf(persona) + 1} de {personas.length}</span>
+            </button>
+          </CarouselItem>
         ))}
-      </div>
-      <Button className="btn-outline" disabled={index >= personas.length - 1} onClick={() => move(1)} type="button"><ChevronRightIcon /></Button>
-    </div>
+      </CarouselContent>
+      <CarouselNext className="btn-outline person-carousel-arrow" />
+    </Carousel>
   )
 }
 
@@ -175,11 +196,10 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
   )
 }
 
-export function PersonSummaryDesktopView({ personas, movimientos, initialPersona, onBack }: PersonSummaryProps) {
+export function PersonSummaryDesktopView({ personas, movimientos, initialPersona, onBack, readOnly = false }: PersonSummaryProps) {
   const [selected, setSelected] = useSelectedPersona(personas, initialPersona)
   const [detail, setDetail] = useState<DetailView | "cards">("cards")
   const resumen = useMemo(() => getResumenPersona(selected, movimientos), [movimientos, selected])
-  const saldos = useMemo(() => calcularSaldos(personas, movimientos), [movimientos, personas])
   const estado = estadoSaldo(resumen.saldo)
 
   if (!selected) return null
@@ -190,31 +210,16 @@ export function PersonSummaryDesktopView({ personas, movimientos, initialPersona
         <h2>Resumen por persona</h2>
         <p>Revisá cuánto debe pagar o recibir cada persona.</p>
       </header>
-      <div className="ps-desktop-people">
-        {personas.map((persona) => {
-          const saldo = saldos.find((item) => item.persona === persona)?.saldo ?? 0
-          const itemEstado = estadoSaldo(saldo)
-          return (
-            <button className={`ps-person-card ${persona === selected ? "is-active" : ""}`} key={persona} onClick={() => { setSelected(persona); setDetail("cards") }} type="button">
-              <PersonAvatar persona={persona} />
-              <strong>{persona}</strong>
-              <Badge className={itemEstado.className}>{itemEstado.label}</Badge>
-              <b className={itemEstado.className}>{formatoARS.format(Math.abs(saldo))}</b>
-              <ChevronRightIcon />
-            </button>
-          )
-        })}
-      </div>
+      {readOnly ? <PersonCarousel personas={personas} selected={selected} onSelect={(persona) => { setSelected(persona); setDetail("cards") }} /> : null}
       <div className="ps-desktop-detail">
         <aside>
           <PersonAvatar className="ps-big-avatar" persona={resumen.persona} />
           <h3>{resumen.persona}</h3>
           <Badge className={estado.className}>{estado.label}</Badge>
           <Separator />
-          <span>{estado.action}<strong className={estado.className}>{formatoARS.format(Math.abs(resumen.saldo))}</strong></span>
-          <span>Parte<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></span>
-          <span>Gastó<strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></span>
-          <span>Saldo<strong className={estado.className}>{formatoARS.format(resumen.saldo)}</strong></span>
+          <span className="ps-side-stat">Parte<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></span>
+          <span className="ps-side-stat">Gastó<strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></span>
+          <span className="ps-side-stat">Saldo<strong className={estado.className}>{formatoARS.format(resumen.saldo)}</strong></span>
         </aside>
         <section>
           {detail === "cards" ? <PersonSummaryCards resumen={resumen} onOpen={setDetail} /> : <DetailList resumen={resumen} view={detail} onBack={() => setDetail("cards")} />}
