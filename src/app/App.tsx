@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, ChevronDownIcon, CopyIcon, PlusIcon, ShareIcon } from "lucide-react"
+import { ArrowUpRightIcon, ChevronDownIcon, CopyIcon, PlusIcon, ReceiptTextIcon, ShareIcon } from "lucide-react"
 import { driver } from "driver.js"
 import type { DriveStep, Driver } from "driver.js"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -383,59 +383,64 @@ export default function App() {
 
   const copiarMovimientos = () => navigator.clipboard.writeText(textoMovimientos(personas, movimientos)).then(() => toast.success("Movimientos copiados."))
   const gastoFormDesktop = (
-    <div className="desktop-mini-form">
-      <h3>Gastos</h3>
+    <div className="desktop-mini-form desktop-expense-form">
       <Input placeholder="Descripción (ej: cena, hotel, nafta...)" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
-      <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
+      <div className="desktop-form-split">
+        <Input inputMode="decimal" min="0" placeholder="$  0,00" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
+        <Select value={gasto.categoria} onValueChange={(categoria) => setGasto({ ...gasto, categoria: categoria as CategoriaGasto })}>
+          <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+          <SelectContent><SelectGroup>{CATEGORIAS_GASTO.map((categoria) => <SelectItem key={categoria.key} value={categoria.key}><CategoriaIcon categoria={categoria.key} />{categoria.label}</SelectItem>)}</SelectGroup></SelectContent>
+        </Select>
+      </div>
       <Select value={gasto.pagador} onValueChange={(pagador) => setGasto({ ...gasto, pagador })}>
-        <SelectTrigger><SelectValue placeholder="Quién pagó" /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder="Seleccionar quién pagó" /></SelectTrigger>
         <SelectContent><SelectGroup>{personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}</SelectGroup></SelectContent>
       </Select>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button className="select-like" type="button">
-            {gasto.participantes.length === 0 ? "Participantes" : gasto.participantes.length === personas.length ? "Todos los seleccionados" : `${gasto.participantes.length} seleccionados`}
-            <ChevronDownIcon data-icon="inline-end" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="participants-menu">
-          <DropdownMenuLabel>Participantes</DropdownMenuLabel>
-          <DropdownMenuSeparator className="dropdown-separator" />
-          <DropdownMenuGroup>
-            {personas.map((persona) => (
-              <DropdownMenuCheckboxItem
-                checked={gasto.participantes.includes(persona)}
-                key={persona}
-                onCheckedChange={(checked) => setGasto({ ...gasto, participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona) })}
-              >
-                {persona}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator className="dropdown-separator" />
-          <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: gasto.participantes.length === personas.length ? [] : personas })} type="button">
-            {gasto.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
-          </Button>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <Select value={gasto.categoria} onValueChange={(categoria) => setGasto({ ...gasto, categoria: categoria as CategoriaGasto })}>
-        <SelectTrigger><SelectValue placeholder="Categoría" /></SelectTrigger>
-        <SelectContent><SelectGroup>{CATEGORIAS_GASTO.map((categoria) => <SelectItem key={categoria.key} value={categoria.key}><CategoriaIcon categoria={categoria.key} />{categoria.label}</SelectItem>)}</SelectGroup></SelectContent>
-      </Select>
+      <div className="desktop-participants-row">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="select-like" type="button">
+              {gasto.participantes.length === 0 ? "Seleccionar participantes" : gasto.participantes.length === personas.length ? "Todos los seleccionados" : `${gasto.participantes.length} seleccionados`}
+              <ChevronDownIcon data-icon="inline-end" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="participants-menu">
+            <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+            <DropdownMenuSeparator className="dropdown-separator" />
+            <DropdownMenuGroup>
+              {personas.map((persona) => (
+                <DropdownMenuCheckboxItem
+                  checked={gasto.participantes.includes(persona)}
+                  key={persona}
+                  onCheckedChange={(checked) => setGasto({ ...gasto, participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona) })}
+                >
+                  {persona}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="dropdown-separator" />
+            <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: gasto.participantes.length === personas.length ? [] : personas })} type="button">
+              {gasto.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
+            </Button>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <p className="desktop-split-note"><ReceiptTextIcon data-icon="inline-start" />Se dividirá el gasto en partes iguales entre los participantes seleccionados.</p>
       <Button className="add-movement" onClick={agregarGasto} type="button"><PlusIcon data-icon="inline-start" />Añadir gasto</Button>
     </div>
   )
   const transferenciaFormDesktop = (
-    <div className="desktop-mini-form">
-      <h3>Transferencias</h3>
+    <div className="desktop-mini-form desktop-transfer-form">
       <Input placeholder="Descripción" value={transferencia.descripcion} onChange={(event) => setTransferencia({ ...transferencia, descripcion: event.target.value })} />
-      <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={transferencia.monto} onChange={(event) => setTransferencia({ ...transferencia, monto: event.target.value })} />
+      <div className="desktop-transfer-amount">
+        <Input inputMode="decimal" min="0" placeholder="$  0,00" type="number" value={transferencia.monto} onChange={(event) => setTransferencia({ ...transferencia, monto: event.target.value })} />
+      </div>
       <Select value={transferencia.de} onValueChange={(de) => setTransferencia({ ...transferencia, de })}>
-        <SelectTrigger><SelectValue placeholder="Origen" /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder="Seleccionar origen" /></SelectTrigger>
         <SelectContent><SelectGroup>{personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}</SelectGroup></SelectContent>
       </Select>
       <Select value={transferencia.a} onValueChange={(a) => setTransferencia({ ...transferencia, a })}>
-        <SelectTrigger><SelectValue placeholder="Destino" /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder="Seleccionar destino" /></SelectTrigger>
         <SelectContent><SelectGroup>{personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}</SelectGroup></SelectContent>
       </Select>
       <Button className="add-movement" onClick={agregarTransferencia} type="button"><PlusIcon data-icon="inline-start" />Registrar transferencia</Button>
@@ -464,7 +469,7 @@ export default function App() {
           <CategoryChartShareCard data={gastosPorCategoria} fecha={fechaCategorias} total={totalGastado} />
         </div>
       </div>
-      <Header onClear={limpiarTodo} />
+      {isMobile ? <Header onClear={limpiarTodo} /> : null}
 
       {isMobile ? (
       <Layout>
@@ -820,14 +825,13 @@ export default function App() {
             nombre={nombre}
             nombreMovimiento={nombreMovimiento}
             onAddPersona={agregarPersona}
+            onClear={limpiarTodo}
             onCopyMovimientos={copiarMovimientos}
-            onDeleteMovimiento={(item) => setMovimientos(movimientos.filter((_, movimientoIndex) => movimientoIndex !== item))}
             onDeletePersona={borrarPersona}
             onEditMovimiento={abrirEdicion}
             onNombreChange={setNombre}
             onSettlementOpenChange={setSettlementOpen}
             onShareReparto={() => void compartirResumenReparto()}
-            onStartTutorial={() => void iniciarTutorialConMockup()}
             pendientes={pendientes}
             personas={personas}
             promedio={promedio}
@@ -849,9 +853,11 @@ export default function App() {
           />
         </>
       )}
-      <footer className={`site-footer ${activeSection === "total" ? "is-mobile-visible" : ""}`}>
-        ¿Te gustó la aplicación? Seguime en <a href="https://github.com/GermanMorini/repartir-gastos" rel="noreferrer" target="_blank">github</a>
-      </footer>
+      {isMobile ? (
+        <footer className={`site-footer ${activeSection === "total" ? "is-mobile-visible" : ""}`}>
+          ¿Te gustó la aplicación? Seguime en <a href="https://github.com/GermanMorini/repartir-gastos" rel="noreferrer" target="_blank">github</a>
+        </footer>
+      ) : null}
       {isMobile ? <BottomNavigation activeSection={activeSection} onChange={irASeccion} /> : null}
     </main>
   )
