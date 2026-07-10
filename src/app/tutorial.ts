@@ -1,7 +1,7 @@
 import type { AppState, Persona } from "../types"
 import { isMobileViewport } from "../lib/viewport"
 
-export type MobileSection = "personas" | "movimientos" | "resumen" | "total"
+export type MobileSection = "personas" | "movimientos" | "resumen"
 
 export type TutorialStepConfig = {
   section: MobileSection
@@ -36,10 +36,10 @@ export const tutorialStepsConfig: TutorialStepConfig[] = [
   { section: "resumen", selector: "[data-tour='resumen-norberto-dialog']", fallback: "[data-tour='resumen']", opensResumen: "Norberto", title: "Resumen de Norberto", description: "Acá ves cuánto le tocaba gastar, cuánto pagó y su resultado final. Podés compartirlo con él para que sepa cuánto debe." },
   { section: "resumen", selector: "[data-tour='calculos']", fallback: "[data-tour='resumen']", title: "¿No podés creer lo que debés?", description: "Revisá los cálculos paso a paso para estar seguro" },
   { section: "resumen", selector: "[data-tour='calculos-dialog']", fallback: "[data-tour='resumen']", opensCalculos: true, title: "Matriz de cálculos", description: "Acá ves cómo cada movimiento cambia el saldo de cada persona." },
-  { section: "total", selector: "[data-tour='total']", title: "Todo listo!", description: "Tocá 'Repartir!' para saber quién le transfiere a quién" },
-  { section: "total", selector: "[data-tour='grafico']", fallback: "[data-tour='total']", title: "¿No sabés en qué se gastó tanto?", description: "Podés comparar categorías para saber en qué se fue la plata" },
-  { section: "total", selector: "[data-tour='grafico-dialog']", fallback: "[data-tour='total']", opensGrafico: true, title: "Gráfico por categoría", description: "El gráfico muestra en qué categorías se concentró el gasto." },
-  { section: "total", selector: "[data-tour='repartir-dialog']", fallback: "[data-tour='total']", opensSettlement: true, title: "Pasale esto a tus contactos", description: "Compartile esto a los demás para que sepan cuánto deben" },
+  { section: "resumen", selector: "[data-tour='total']", fallback: "[data-tour='resumen']", title: "Todo listo!", description: "Tocá 'Repartir!' para saber quién le transfiere a quién" },
+  { section: "resumen", selector: "[data-tour='grafico']", fallback: "[data-tour='resumen']", title: "¿No sabés en qué se gastó tanto?", description: "Podés comparar categorías para saber en qué se fue la plata" },
+  { section: "resumen", selector: "[data-tour='grafico-dialog']", fallback: "[data-tour='resumen']", opensGrafico: true, title: "Gráfico por categoría", description: "El gráfico muestra en qué categorías se concentró el gasto." },
+  { section: "resumen", selector: "[data-tour='repartir-dialog']", fallback: "[data-tour='resumen']", opensSettlement: true, title: "Pasale esto a tus contactos", description: "Compartile esto a los demás para que sepan cuánto deben" },
 ]
 
 export function nextPaint() {

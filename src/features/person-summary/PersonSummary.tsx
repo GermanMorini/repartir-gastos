@@ -24,6 +24,7 @@ type PersonSummaryProps = {
   title?: string
   onBack?: () => void
   onShare?: () => void
+  closing?: boolean
 }
 
 function iniciales(persona: Persona) {
@@ -123,7 +124,7 @@ function SummaryStats({ resumen, onOpen, saldoClickable = false, showTransferBut
         <SummaryActionRow label="Ya recibió" amount={formatoARS.format(resumen.totalRecibido)} onClick={onOpen ? () => onOpen("recibido") : undefined} />
         <SummaryActionRow label="Saldo" amount={formatoARS.format(resumen.saldo)} className={estado.className} onClick={saldoClickable && onOpen ? () => onOpen("transferencias") : undefined} />
       </div>
-      {showTransferButton && onOpen ? <Button className="btn-outline ps-transfer-button" onClick={() => onOpen("transferencias")} type="button">¿A quién le transfiero?</Button> : null}
+      {showTransferButton && onOpen ? <Button className="btn-outline ps-transfer-button" onClick={() => onOpen("transferencias")} type="button">¿A quién le transfiere?</Button> : null}
     </Card>
   )
 }
@@ -147,7 +148,7 @@ function DetailRows({ resumen, view, pendientes }: { resumen: ResumenPersona; vi
   )
   return (
     <>
-      {pendientes.map((transferencia, index) => <p className="ps-part-row" key={`${transferencia.tipo}-${transferencia.persona}-${index}`}><span className="ps-row-icon ps-transfer-icon"><ArrowRightLeftIcon /></span><span><strong>{transferencia.tipo === "pagar" ? `A ${transferencia.persona}` : `De ${transferencia.persona}`}</strong><small>Transferencia sugerida</small></span><b>{formatoARS.format(transferencia.monto)}</b></p>)}
+      {pendientes.map((transferencia, index) => <p className="ps-part-row" key={`${transferencia.tipo}-${transferencia.persona}-${index}`}><span className="ps-row-icon ps-transfer-icon"><ArrowRightLeftIcon /></span><span><strong>{transferencia.tipo === "pagar" ? `A ${transferencia.persona}` : `De ${transferencia.persona}`}</strong></span><b>{formatoARS.format(transferencia.monto)}</b></p>)}
       {pendientes.length === 0 ? <p className="empty">No hay transferencias pendientes.</p> : null}
     </>
   )
@@ -158,7 +159,7 @@ function DetailList({ resumen, view, pendientes, onBack, closing = false }: { re
     parte: ["Su parte de los gastos", "Lo que le corresponde de cada gasto", resumen.totalLeTocaba],
     gasto: ["Lo que pagó", "Gastos que pagó y pagos realizados", resumen.totalSalioBolsillo],
     recibido: ["Lo que le transfirieron", "Transferencias que recibió", resumen.totalRecibido],
-    transferencias: ["Transferencias", resumen.saldo < 0 ? "Lo que deberías transferir" : "Lo que deberían transferirte", Math.abs(resumen.saldo)],
+    transferencias: ["Transferencias", resumen.saldo < 0 ? `Lo que ${resumen.persona} debería transferir` : `Lo que deberían transferir a ${resumen.persona}`, Math.abs(resumen.saldo)],
   } as const
   const [title, subtitle, amount] = titles[view]
 
@@ -177,7 +178,7 @@ function DetailList({ resumen, view, pendientes, onBack, closing = false }: { re
   )
 }
 
-export function PersonSummaryMobilePage({ personas, movimientos, initialPersona, readOnly = false, title = "Hoja de liquidación", onBack, onShare }: PersonSummaryProps) {
+export function PersonSummaryMobilePage({ personas, movimientos, initialPersona, readOnly = false, title = "Hoja de liquidación", onBack, onShare, closing = false }: PersonSummaryProps) {
   const [selected, setSelected] = useSelectedPersona(personas, initialPersona)
   const [detail, setDetail] = useState<DetailView | "cards">("cards")
   const [closingDetail, setClosingDetail] = useState(false)
@@ -192,10 +193,10 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
 
   if (!selected) return null
   return (
-    <main className="ps-mobile-page" data-tour={selected === "Norberto" ? "resumen-norberto-dialog" : undefined}>
+    <main className={`ps-mobile-page${readOnly ? "" : " is-slide-page"}${closing ? " is-closing" : ""}`} data-tour={selected === "Norberto" ? "resumen-norberto-dialog" : undefined}>
       <header className="ps-mobile-head">
         {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ArrowLeftIcon /></Button> : <span />}
-        <h1>{readOnly ? "Resumen compartido" : title}</h1>
+        <h1>{readOnly ? "Resumen interactivo" : title}</h1>
         {onShare ? <Button className="btn-outline" onClick={onShare} type="button"><ShareIcon /></Button> : <span />}
       </header>
       <ScrollArea className="ps-mobile-scroll">

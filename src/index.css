@@ -15,6 +15,43 @@
   --primary-foreground: #ffffff;
 }
 
+.category-icon {
+  display: inline-grid;
+  width: 1.85rem;
+  height: 1.85rem;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--category-color) 22%, #fff);
+  color: var(--category-color);
+  flex: 0 0 auto;
+}
+
+.category-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.category-badge .category-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.category-badge .category-icon svg {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
+.desktop-movement-icon:has(.category-icon),
+.ps-row-icon:has(.category-icon) {
+  background: transparent;
+}
+
+.desktop-movement-icon .category-icon,
+.ps-row-icon .category-icon {
+  width: 100%;
+  height: 100%;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -3852,5 +3889,106 @@ body {
   .edit-dialog .dialog-close {
     top: 0.75rem;
     right: max(0.75rem, env(safe-area-inset-right));
+  }
+}
+
+@media (max-width: 719px) {
+  .mobile-two-fields {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .mobile-two-fields label,
+  .mobile-two-fields .select-like,
+  .mobile-two-fields .select-trigger {
+    width: 100%;
+  }
+
+  .movements-section .movement-list {
+    min-height: 16.15rem;
+  }
+
+  .site-footer-inline {
+    display: block;
+    margin: 0.85rem 0 0;
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  .site-footer-inline a {
+    color: var(--blue);
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .summary-list {
+    order: 2;
+  }
+
+  .summary-card > .desktop-pagination {
+    order: 3;
+  }
+
+  .summary-chart-action {
+    order: 4;
+    margin-top: 1rem;
+  }
+
+  .add-expense-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+  }
+
+  .add-expense-row .select-trigger,
+  .add-expense-row .add-movement {
+    height: 100%;
+  }
+
+  .add-expense-row .add-movement {
+    white-space: nowrap;
+  }
+
+  .movements-section .desktop-pagination,
+  .summary-card .desktop-pagination {
+    justify-content: center;
+    margin: 1rem 0 0;
+  }
+
+  .summary-bottom-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    order: 5;
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .summary-bottom-actions .btn,
+  .summary-calculos-action,
+  .summary-calculos-action .btn {
+    width: 100%;
+  }
+
+  .summary-bottom-actions .btn {
+    min-height: 2.9rem;
+  }
+
+  .summary-bottom-actions .settle-button {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 3.7rem;
+    font-size: 1.18rem;
+  }
+
+  .summary-chart-action {
+    width: 100%;
+  }
+
+  .mobile-nav {
+    grid-template-columns: repeat(3, 1fr);
   }
 }

@@ -12,6 +12,13 @@
   z-index: 1;
 }
 
+.share-back {
+  position: fixed;
+  z-index: 95;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: max(0.75rem, env(safe-area-inset-left));
+}
+
 .share-error {
   display: grid;
   place-content: center;

@@ -37,6 +37,9 @@ export function PersonasSection({
       <p className="people-tutorial-hint">
         ¿No sabés que hacer? haz <button onClick={onStartTutorial} type="button">este</button> tutorial para comenzar
       </p>
+      <p className="site-footer-inline">
+        ¿Te gustó la aplicación? Seguime en <a href="https://github.com/GermanMorini/repartir-gastos" rel="noreferrer" target="_blank">github</a>
+      </p>
     </section>
   )
 }

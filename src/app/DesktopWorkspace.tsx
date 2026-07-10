@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, EraserIcon, PieChartIcon, SearchIcon, ShareIcon, Shredder, UsersIcon } from "lucide-react"
+import { ArrowLeftRightIcon, ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, EraserIcon, PieChartIcon, SearchIcon, ShareIcon, Shredder, UsersIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { ConfirmDialog } from "../components/shared/ConfirmDialog"
@@ -167,7 +167,7 @@ export function DesktopWorkspace({
   const pagedSaldos = filteredSaldos.slice((currentSummaryPage - 1) * summaryPageSize, currentSummaryPage * summaryPageSize)
   const navItems = [
     { section: "personas" as const, label: "Personas", meta: `${personas.length} personas`, icon: UsersIcon },
-    { section: "movimientos" as const, label: "Movimientos", meta: `${movimientos.length} movimientos`, icon: ArrowUpRightIcon },
+    { section: "movimientos" as const, label: "Movimientos", meta: `${movimientos.length} movimientos`, icon: ArrowLeftRightIcon },
     { section: "resumen" as const, label: "Resumen", meta: "Ver saldos", icon: PieChartIcon },
   ]
 

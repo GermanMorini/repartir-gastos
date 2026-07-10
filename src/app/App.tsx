@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, ChevronDownIcon, CopyIcon, PlusIcon, ReceiptTextIcon, ShareIcon } from "lucide-react"
+import { ArrowLeftRightIcon, ChevronDownIcon, CopyIcon, PlusIcon, ReceiptTextIcon, ShareIcon } from "lucide-react"
 import { driver } from "driver.js"
 import type { DriveStep, Driver } from "driver.js"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -9,6 +9,7 @@ import { Header } from "./Header"
 import { MobileLayout } from "./MobileLayout"
 import { BottomNavigation } from "../components/navigation/BottomNavigation"
 import { CategoriaIcon } from "../components/shared/CategoryBadge"
+import { PaginationControls } from "../components/shared/PaginationControls"
 import { PersonSummaryMobilePage } from "../features/person-summary/PersonSummary"
 import { SharePage } from "../features/share/SharePage"
 import { encodeShareState } from "../features/share/encodeShare"
@@ -17,7 +18,6 @@ import { PersonasSection } from "../sections/personas/PersonasSection"
 import { MovimientoItem } from "../sections/movimientos/MovimientoItem"
 import { ResumenSection } from "../sections/resumen/ResumenSection"
 import { CategoryChartShareCard } from "../sections/total/CategoryChart"
-import { TotalSection } from "../sections/total/TotalSection"
 import { calcularSaldos, calcularTransferenciasPendientes, getGastosPorCategoria, getMatrizCalculos, getResumenPersona } from "../lib/calculos"
 import { CATEGORIAS_GASTO, CATEGORIA_DEFAULT, getCategoriaOrden } from "../lib/categorias"
 import { descargarImagen, toPngDataUrl } from "../lib/export-image"
@@ -55,19 +55,25 @@ function EditableApp() {
   const [transferencia, setTransferencia] = useState({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
   const [activeSection, setActiveSection] = useState<MobileSection>("personas")
+  const [mobileMovementPage, setMobileMovementPage] = useState(1)
   const [tutorialDialogOpen, setTutorialDialogOpen] = useState(() => !tutorialHidden())
   const [hideTutorial, setHideTutorial] = useState(false)
   const [settlementOpen, setSettlementOpen] = useState(false)
   const [resumenOpenPersona, setResumenOpenPersona] = useState<Persona | null>(null)
+  const [resumenClosing, setResumenClosing] = useState(false)
   const [calculosOpen, setCalculosOpen] = useState(false)
   const [graficoOpen, setGraficoOpen] = useState(false)
   const exportCategoriasRef = useRef<HTMLDivElement | null>(null)
   const calculosRef = useRef<HTMLDivElement | null>(null)
   const tutorialDriverRef = useRef<Driver | null>(null)
   const tutorialPreviousStateRef = useRef<AppState | null>(null)
+  const resumenCloseTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
 
   useEffect(() => saveState({ personas, movimientos }), [personas, movimientos])
-  useEffect(() => () => tutorialDriverRef.current?.destroy(), [])
+  useEffect(() => () => {
+    tutorialDriverRef.current?.destroy()
+    if (resumenCloseTimerRef.current) window.clearTimeout(resumenCloseTimerRef.current)
+  }, [])
 
   const movimientosCard = useMemo(
     () => movimientos
@@ -80,11 +86,29 @@ function EditableApp() {
     [movimientos],
   )
   const saldos = useMemo(() => calcularSaldos(personas, movimientos), [personas, movimientos])
+  const mobileMovementTotalPages = Math.max(1, Math.ceil(movimientosCard.length / 3))
+  const currentMobileMovementPage = Math.min(mobileMovementPage, mobileMovementTotalPages)
+  const mobileMovimientos = movimientosCard.slice((currentMobileMovementPage - 1) * 3, currentMobileMovementPage * 3)
   const matrizCalculos = useMemo(() => getMatrizCalculos(personas, movimientosCard.map((item) => item.movimiento)), [personas, movimientosCard])
   const gastosPorCategoria = useMemo(() => getGastosPorCategoria(movimientos), [movimientos])
   const pendientes = useMemo(() => calcularTransferenciasPendientes(saldos), [saldos])
   const totalGastado = saldos.reduce((total, saldo) => total + saldo.totalPagadoEnGastos, 0)
   const promedio = personas.length ? totalGastado / personas.length : 0
+
+  function abrirResumenPersona(persona: Persona | null) {
+    if (resumenCloseTimerRef.current) window.clearTimeout(resumenCloseTimerRef.current)
+    setResumenClosing(false)
+    setResumenOpenPersona(persona)
+  }
+
+  function cerrarResumenPersona() {
+    setResumenClosing(true)
+    resumenCloseTimerRef.current = window.setTimeout(() => {
+      setResumenOpenPersona(null)
+      setResumenClosing(false)
+      resumenCloseTimerRef.current = null
+    }, 180)
+  }
   const fechaCategorias = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date())
   const firmaResumen = "💲 Resumen hecho con https://germanmorini.github.io/repartir-gastos/"
   const resumenCopiable = pendientes.length
@@ -351,9 +375,19 @@ function EditableApp() {
         toast.error("El reparto es demasiado grande para compartir por link. Comparte los gastos como texto")
         return
       }
+      if (isMobileViewport() && navigator.share) {
+        try {
+          await navigator.share({ title: "Resumen de liquidación", url })
+          toast.success("Resumen compartido.")
+          return
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") return
+        }
+      }
       await navigator.clipboard.writeText(url)
       toast.success("Link copiado.")
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
       toast.error("No se pudo compartir el resumen.")
     }
   }
@@ -520,7 +554,7 @@ function EditableApp() {
           {mostrarSeccion("movimientos") ? <section className={`app-section movement-form ${vistaMobile("movimientos")}`} id="movimientos" data-tour="movimientos">
             <div className="section-head movement-form-head">
               <div className="section-title section-title-movements">
-                <span className="section-icon"><ArrowUpRightIcon /></span>
+                <span className="section-icon"><ArrowLeftRightIcon /></span>
                 <div>
                   <h2>Movimientos</h2>
                   <p>Registrá gastos y transferencias.</p>
@@ -547,52 +581,54 @@ function EditableApp() {
                 <label>
                   <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
                 </label>
-                <label>
-                  <Select value={gasto.pagador} onValueChange={(pagador) => setGasto({ ...gasto, pagador })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Quién pagó" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </label>
-                <label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button className="select-like" type="button">
-                        {gasto.participantes.length === 0 ? "Participantes" : gasto.participantes.length === personas.length ? "Todos los seleccionados" : `${gasto.participantes.length} seleccionados`}
-                        <ChevronDownIcon data-icon="inline-end" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="participants-menu">
-                      <DropdownMenuLabel>Participantes</DropdownMenuLabel>
-                      <DropdownMenuSeparator className="dropdown-separator" />
-                      <DropdownMenuGroup>
-                        {personas.map((persona) => (
-                          <DropdownMenuCheckboxItem
-                            checked={gasto.participantes.includes(persona)}
-                            key={persona}
-                            onCheckedChange={(checked) =>
-                              setGasto({
-                                ...gasto,
-                                participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona),
-                              })
-                            }
-                          >
-                            {persona}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuGroup>
-                      <DropdownMenuSeparator className="dropdown-separator" />
-                      <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: gasto.participantes.length === personas.length ? [] : personas })} type="button">
-                        {gasto.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
-                      </Button>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </label>
+                <div className="mobile-two-fields">
+                  <label>
+                    <Select value={gasto.pagador} onValueChange={(pagador) => setGasto({ ...gasto, pagador })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Quién pagó" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  <label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button className="select-like" type="button">
+                          {gasto.participantes.length === 0 ? "Participantes" : gasto.participantes.length === personas.length ? "Todos los seleccionados" : `${gasto.participantes.length} seleccionados`}
+                          <ChevronDownIcon data-icon="inline-end" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="participants-menu">
+                        <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+                        <DropdownMenuSeparator className="dropdown-separator" />
+                        <DropdownMenuGroup>
+                          {personas.map((persona) => (
+                            <DropdownMenuCheckboxItem
+                              checked={gasto.participantes.includes(persona)}
+                              key={persona}
+                              onCheckedChange={(checked) =>
+                                setGasto({
+                                  ...gasto,
+                                  participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona),
+                                })
+                              }
+                            >
+                              {persona}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator className="dropdown-separator" />
+                        <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: gasto.participantes.length === personas.length ? [] : personas })} type="button">
+                          {gasto.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                        </Button>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </label>
+                </div>
                 <div className="add-expense-row">
                   <Select value={gasto.categoria} onValueChange={(categoria) => setGasto({ ...gasto, categoria: categoria as CategoriaGasto })}>
                     <SelectTrigger>
@@ -623,30 +659,32 @@ function EditableApp() {
                 <label>
                   <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={transferencia.monto} onChange={(event) => setTransferencia({ ...transferencia, monto: event.target.value })} />
                 </label>
-                <label>
-                  <Select value={transferencia.de} onValueChange={(de) => setTransferencia({ ...transferencia, de })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Origen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </label>
-                <label>
-                  <Select value={transferencia.a} onValueChange={(a) => setTransferencia({ ...transferencia, a })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Destino" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </label>
+                <div className="mobile-two-fields">
+                  <label>
+                    <Select value={transferencia.de} onValueChange={(de) => setTransferencia({ ...transferencia, de })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Origen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  <label>
+                    <Select value={transferencia.a} onValueChange={(a) => setTransferencia({ ...transferencia, a })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Destino" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                </div>
                 <Button className="add-movement" onClick={agregarTransferencia} type="button">
                   <PlusIcon data-icon="inline-start" />
                   Registrar transferencia
@@ -666,7 +704,7 @@ function EditableApp() {
             {movimientos.length === 0 ? <p className="empty">Todavía no hay movimientos.</p> : null}
             {movimientos.length > 0 ? (
               <div className="movement-list">
-                {movimientosCard.map(({ movimiento, index }) => (
+                {mobileMovimientos.map(({ movimiento, index }) => (
                   <MovimientoItem
                     key={`${movimiento.tipo}-${index}`}
                     movimiento={movimiento}
@@ -678,6 +716,7 @@ function EditableApp() {
                 ))}
               </div>
             ) : null}
+            {movimientos.length > 3 ? <PaginationControls page={currentMobileMovementPage} totalPages={mobileMovementTotalPages} onPage={setMobileMovementPage} /> : null}
             {movimientos.length > 0 ? (
               <Button className="movement-copy-button movement-copy-mobile" data-tour="copy-movimientos-mobile" onClick={() => void compartirMovimientos()} type="button">
                 <ShareIcon data-icon="inline-start" />
@@ -815,26 +854,19 @@ function EditableApp() {
               movimientos={movimientos}
               onCalculosOpenChange={setCalculosOpen}
               onExportCalculos={() => void exportarCalculosComoImagen()}
-              onResumenOpenPersonaChange={setResumenOpenPersona}
-              onShareLink={() => void compartirLinkResumen()}
-              personas={personas}
-              saldos={saldos}
-            />
-          ) : null}
-
-          {mostrarSeccion("total") ? (
-            <TotalSection
-              className={vistaMobile("total")}
               gastosPorCategoria={gastosPorCategoria}
               graficoOpen={graficoOpen}
               onCopyCategorias={() => navigator.clipboard.writeText(textoCategorias(totalGastado, gastosPorCategoria, porcentaje)).then(() => toast.success("Resumen copiado."))}
               onExportGrafico={() => void exportarGraficoComoImagen()}
               onGraficoOpenChange={setGraficoOpen}
+              onResumenOpenPersonaChange={abrirResumenPersona}
+              onShareLink={() => void compartirLinkResumen()}
               onSettlementOpenChange={setSettlementOpen}
               onShareReparto={() => void compartirResumenReparto()}
+              personas={personas}
               pendientes={pendientes}
-              promedio={promedio}
               resumenCopiable={resumenCopiable}
+              saldos={saldos}
               settlementOpen={settlementOpen}
               totalGastado={totalGastado}
             />
@@ -883,17 +915,13 @@ function EditableApp() {
       {isMobile && resumenOpenPersona ? (
         <PersonSummaryMobilePage
           initialPersona={resumenOpenPersona}
+          closing={resumenClosing}
           movimientos={movimientos}
-          onBack={() => setResumenOpenPersona(null)}
+          onBack={cerrarResumenPersona}
           onShare={() => void compartirResumenPersona(getResumenPersona(resumenOpenPersona, movimientos))}
           personas={personas}
           title="Hoja de liquidación"
         />
-      ) : null}
-      {isMobile ? (
-        <footer className={`site-footer ${activeSection === "total" ? "is-mobile-visible" : ""}`}>
-          ¿Te gustó la aplicación? Seguime en <a href="https://github.com/GermanMorini/repartir-gastos" rel="noreferrer" target="_blank">github</a>
-        </footer>
       ) : null}
       {isMobile ? <BottomNavigation activeSection={activeSection} onChange={irASeccion} /> : null}
     </main>

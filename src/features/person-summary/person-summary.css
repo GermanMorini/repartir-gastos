@@ -8,6 +8,14 @@
   color: var(--foreground);
 }
 
+.ps-mobile-page.is-slide-page {
+  animation: ps-detail-open 180ms ease-out;
+}
+
+.ps-mobile-page.is-slide-page.is-closing {
+  animation: ps-detail-close 180ms ease-in forwards;
+}
+
 .ps-mobile-head {
   display: grid;
   grid-template-columns: 2.75rem 1fr 2.75rem;
