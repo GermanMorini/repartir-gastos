@@ -24,7 +24,7 @@ type PersonSummaryProps = {
   readOnly?: boolean
   title?: string
   onBack?: () => void
-  onShare?: () => void
+  onShare?: (persona: Persona) => void
   closing?: boolean
 }
 
@@ -227,7 +227,7 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
       <header className="ps-mobile-head">
         {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ArrowLeftIcon /></Button> : <span />}
         <h1>{readOnly ? "Resumen interactivo" : title}</h1>
-        {onShare ? <Button className="btn-outline" onClick={onShare} type="button"><ShareIcon /></Button> : <span />}
+        {onShare ? <Button className="btn-outline" onClick={() => onShare(selected)} type="button"><ShareIcon /></Button> : <span />}
       </header>
       <ScrollArea className="ps-mobile-scroll">
         <PersonCarousel personas={personas} selected={selected} onSelect={setSelected} />

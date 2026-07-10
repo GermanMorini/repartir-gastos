@@ -918,7 +918,7 @@ function EditableApp() {
           closing={resumenClosing}
           movimientos={movimientos}
           onBack={cerrarResumenPersona}
-          onShare={() => void compartirResumenPersona(getResumenPersona(resumenOpenPersona, movimientos))}
+          onShare={(persona) => void compartirResumenPersona(getResumenPersona(persona, movimientos))}
           personas={personas}
           title="Hoja de liquidación"
         />
