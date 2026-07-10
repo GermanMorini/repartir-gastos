@@ -4,6 +4,7 @@ import type { DriveStep, Driver } from "driver.js"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast, Toaster } from "sonner"
 import "driver.js/dist/driver.css"
+import "./desktop-fixes.css"
 import "./tutorial-demo.css"
 import { DesktopWorkspace } from "./DesktopWorkspace"
 import { Header } from "./Header"
@@ -26,7 +27,7 @@ import { descargarImagen, toPngDataUrl } from "../lib/export-image"
 import { formatoARS, formatoSaldoMatriz, porcentaje } from "../lib/money"
 import { nombreMovimiento, textoCategorias, textoMovimientos, textoResumenPersona } from "../lib/share-text"
 import { isMobileViewport, useIsMobile } from "../lib/viewport"
-import { cloneTutorialState, getTutorialElement, hideTutorialForever, nextPaint, tutorialHidden, tutorialStepsConfig } from "./tutorial"
+import { cloneTutorialState, getTutorialElement, getTutorialStepsConfig, hideTutorialForever, nextPaint, tutorialHidden } from "./tutorial"
 import type { MobileSection } from "./tutorial"
 import { Badge, Button, Checkbox, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
 import { clearState, loadState, saveState } from "../lib/storage"
@@ -58,6 +59,7 @@ function EditableApp() {
   const [transferencia, setTransferencia] = useState({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
   const [activeSection, setActiveSection] = useState<MobileSection>("personas")
+  const [desktopSection, setDesktopSection] = useState<MobileSection>("personas")
   const [movementTab, setMovementTab] = useState<"gasto" | "transferencia">("gasto")
   const [mobileMovementPage, setMobileMovementPage] = useState(1)
   const [mobileMovementPageDirection, setMobileMovementPageDirection] = useState<"next" | "prev">("next")
@@ -274,18 +276,20 @@ function EditableApp() {
   }
 
   async function runTutorialDemo(index: number) {
-    const demo = tutorialStepsConfig[index]?.demo
+    const demo = getTutorialStepsConfig()[index]?.demo
     if (demo === "personas") await runPersonasDemo()
     if (demo === "movimientos") await runMovimientosDemo()
     if (demo === "resumen") await runResumenDemo()
   }
 
   async function prepararPasoTutorial(index: number) {
-    const step = tutorialStepsConfig[index]
+    const step = getTutorialStepsConfig()[index]
     if (!step) return
     if (isMobileViewport()) {
       setActiveSection(step.section)
       window.scrollTo({ top: 0, behavior: "auto" })
+    } else {
+      setDesktopSection(step.section)
     }
     setResumenOpenPersona(null)
     setCalculosOpen(false)
@@ -295,7 +299,8 @@ function EditableApp() {
   }
 
   function startTutorial() {
-    const steps: DriveStep[] = tutorialStepsConfig.map((step) => ({
+    const tutorialSteps = getTutorialStepsConfig()
+    const steps: DriveStep[] = tutorialSteps.map((step) => ({
       element: () => getTutorialElement(step),
       popover: {
         title: step.title,
@@ -393,6 +398,7 @@ function EditableApp() {
     setMovementTab("gasto")
     tutorialCompletedDemosRef.current = new Set()
     setActiveSection("personas")
+    setDesktopSection("personas")
     setSettlementOpen(false)
     setResumenOpenPersona(null)
     setCalculosOpen(false)
@@ -1138,17 +1144,21 @@ function EditableApp() {
       ) : (
         <>
           <DesktopWorkspace
+            desktopSection={desktopSection}
             gastoForm={gastoFormDesktop}
             gastosPorCategoria={gastosPorCategoria}
             movimientos={movimientos}
             movimientosCard={movimientosCard}
+            movementTab={movementTab}
             nombre={nombre}
             nombreMovimiento={nombreMovimiento}
             onAddPersona={agregarPersona}
             onClear={limpiarTodo}
             onCopyMovimientos={copiarMovimientos}
             onDeletePersona={borrarPersona}
+            onDesktopSectionChange={setDesktopSection}
             onEditMovimiento={abrirEdicion}
+            onMovementTabChange={setMovementTab}
             onNombreChange={setNombre}
             onSettlementOpenChange={setSettlementOpen}
             onShareLink={() => void compartirLinkResumen()}

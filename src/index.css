@@ -3426,6 +3426,12 @@ body {
     color: var(--foreground);
     padding: 0.85rem 0.95rem;
     text-align: left;
+    cursor: copy;
+  }
+
+  .desktop-summary-person-card:focus-visible {
+    outline: 3px solid rgb(109 40 217 / 0.32);
+    outline-offset: 2px;
   }
 
   .desktop-summary-card-head {

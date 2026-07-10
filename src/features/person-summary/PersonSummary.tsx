@@ -39,8 +39,14 @@ function estadoSaldo(saldo: number) {
   return { label: "Al día", className: "neutral" }
 }
 
+function formatAmountForPayment(monto: number) {
+  const isNegative = monto < 0
+  const value = Math.abs(monto).toFixed(2).replace(".", ",")
+  return isNegative ? `-${value}` : value
+}
+
 function copyAmount(monto: number) {
-  navigator.clipboard.writeText(formatoARS.format(monto))
+  navigator.clipboard.writeText(formatAmountForPayment(monto))
     .then(() => toast.success("Monto copiado."))
     .catch(() => toast.error("No se pudo copiar el monto."))
 }
@@ -196,7 +202,7 @@ function DetailList({ resumen, view, pendientes, onBack, closing = false }: { re
   return (
     <Card className={`ps-detail-list ps-detail-${view}${closing ? " is-closing" : ""}${view === "transferencias" && resumen.saldo < 0 ? " negative" : ""}`}>
       {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ChevronLeftIcon />Volver</Button> : null}
-      <header><strong>{title}</strong><small>{subtitle}</small><b>{formatoARS.format(amount)}</b>{view === "transferencias" && resumen.saldo < 0 ? <span className="ps-transfer-hint">Toca una persona para copiar el monto</span> : null}</header>
+      <header><strong>{title}</strong><small>{subtitle}</small><b>{formatoARS.format(amount)}</b>{view === "transferencias" && resumen.saldo < 0 ? <span className="ps-transfer-hint">Toca un monto para copiarlo al portapapeles</span> : null}</header>
       <Separator />
       <ScrollArea className="ps-detail-scroll">
         <div>
@@ -292,9 +298,17 @@ export function PersonSummaryDesktopDrawer({ personas, movimientos, persona, det
   const resumen = useMemo(() => getResumenPersona(persona, movimientos), [movimientos, persona])
   const pendientesPersona = useMemo(() => pendingForPersona(persona, personas, movimientos), [movimientos, persona, personas])
   const closeDetail = () => {
+    if (closingDetail) return
     setClosingDetail(true)
     window.setTimeout(onClose, 180)
   }
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeDetail()
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  })
 
   return (
     <div className="ps-desktop-drawer" onClick={closeDetail}>

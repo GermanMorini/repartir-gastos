@@ -1,6 +1,6 @@
 import { ArrowLeftRightIcon, ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, EraserIcon, PieChartIcon, SearchIcon, ShareIcon, Shredder, UsersIcon } from "lucide-react"
 import { useMemo, useState } from "react"
-import type { ReactNode } from "react"
+import type { MouseEvent as ReactMouseEvent, ReactNode } from "react"
 import { ConfirmDialog } from "../components/shared/ConfirmDialog"
 import { CategoriaIcon, CategoryBadge } from "../components/shared/CategoryBadge"
 import { PersonSummaryDesktopDrawer } from "../features/person-summary/PersonSummary"
@@ -9,14 +9,18 @@ import { PersonaItem } from "../sections/personas/PersonaItem"
 import { SlidingText } from "../components/shared/SlidingText"
 import { CategoryDetailList, CategoryPie } from "../sections/total/CategoryChart"
 import { RepartirDialog } from "../sections/total/RepartirDialog"
+import { getResumenPersona } from "../lib/calculos"
 import { CATEGORIAS_GASTO } from "../lib/categorias"
 import { formatoARS } from "../lib/money"
+import { textoResumenPersona } from "../lib/share-text"
 import type { Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "../types"
 import { Badge, Button, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
+import { toast } from "sonner"
 
 type DesktopSection = "personas" | "movimientos" | "resumen"
 type SummaryDetail = "parte" | "gasto" | "recibido" | "transferencias"
 type DesktopWorkspaceProps = {
+  desktopSection: DesktopSection
   personas: Persona[]
   nombre: string
   movimientos: Movimiento[]
@@ -33,6 +37,7 @@ type DesktopWorkspaceProps = {
   onNombreChange: (nombre: string) => void
   onAddPersona: () => void
   onDeletePersona: (persona: Persona) => void
+  onDesktopSectionChange: (section: DesktopSection) => void
   onEditMovimiento: (index: number, movimiento: Movimiento) => void
   onCopyMovimientos: () => void
   nombreMovimiento: (movimiento: Movimiento) => string
@@ -40,10 +45,13 @@ type DesktopWorkspaceProps = {
   onShareLink: () => void
   gastoForm: ReactNode
   transferenciaForm: ReactNode
+  movementTab: "gasto" | "transferencia"
+  onMovementTabChange: (value: "gasto" | "transferencia") => void
 }
 
 const summaryPageSize = 6
 const movementPageSize = 8
+const defaultMovementColumnWidths = [24, 12, 16, 15, 15, 18]
 
 function estadoSaldo(saldo: number) {
   const centavos = Math.round(saldo * 100)
@@ -105,6 +113,7 @@ function DesktopMovementRow({
 }
 
 export function DesktopWorkspace({
+  desktopSection,
   personas,
   nombre,
   movimientos,
@@ -121,6 +130,7 @@ export function DesktopWorkspace({
   onNombreChange,
   onAddPersona,
   onDeletePersona,
+  onDesktopSectionChange,
   onEditMovimiento,
   onCopyMovimientos,
   nombreMovimiento,
@@ -128,8 +138,10 @@ export function DesktopWorkspace({
   onShareLink,
   gastoForm,
   transferenciaForm,
+  movementTab,
+  onMovementTabChange,
 }: DesktopWorkspaceProps) {
-  const [desktopSection, setDesktopSection] = useState<DesktopSection>("personas")
+  const [movementColumnWidths, setMovementColumnWidths] = useState(defaultMovementColumnWidths)
   const [movementPage, setMovementPage] = useState(1)
   const [movementSearch, setMovementSearch] = useState("")
   const [movementType, setMovementType] = useState("todos")
@@ -174,10 +186,46 @@ export function DesktopWorkspace({
     { section: "movimientos" as const, label: "Movimientos", meta: `${movimientos.length} movimientos`, icon: ArrowLeftRightIcon },
     { section: "resumen" as const, label: "Resumen", meta: "Ver saldos", icon: PieChartIcon },
   ]
+  const startMovementColumnResize = (columnIndex: number, event: ReactMouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const table = event.currentTarget.closest("table")
+    const tableWidth = table?.getBoundingClientRect().width ?? 1
+    const startX = event.clientX
+    const startWidths = [...movementColumnWidths]
+    const minWidth = 8
+
+    const onMove = (moveEvent: MouseEvent) => {
+      const delta = ((moveEvent.clientX - startX) / tableWidth) * 100
+      const current = Math.max(minWidth, startWidths[columnIndex] + delta)
+      const next = Math.max(minWidth, startWidths[columnIndex + 1] - delta)
+      const totalPair = startWidths[columnIndex] + startWidths[columnIndex + 1]
+      if (current + next > totalPair) return
+      setMovementColumnWidths((widths) => widths.map((width, index) => {
+        if (index === columnIndex) return current
+        if (index === columnIndex + 1) return totalPair - current
+        return width
+      }))
+    }
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+      document.body.classList.remove("is-resizing-column")
+    }
+    document.body.classList.add("is-resizing-column")
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
+  }
+  const movementHeaders = ["Movimiento", "Tipo", "Pagó / De", "Participantes", "Categoría", "Total"]
+  const copyResumenPersona = (persona: Persona) => {
+    navigator.clipboard.writeText(textoResumenPersona(getResumenPersona(persona, movimientos)))
+      .then(() => toast.success("Resumen copiado."))
+      .catch(() => toast.error("No se pudo copiar el resumen."))
+  }
 
   return (
     <div className="desktop-shell">
-      <aside className="desktop-sidebar">
+      <aside className="desktop-sidebar" data-tour="desktop-sidebar">
         <div className="desktop-brand">
           <span><UsersIcon /></span>
           <div><strong>Repartir gastos</strong><small>Organizá tus gastos fácilmente</small></div>
@@ -186,7 +234,7 @@ export function DesktopWorkspace({
           {navItems.map((item) => {
             const Icon = item.icon
             return (
-              <button className={`desktop-sidebar-item nav-${item.section} ${desktopSection === item.section ? `active active-${item.section}` : ""}`} key={item.section} onClick={() => { setDesktopSection(item.section); setSelectedPersona(null); setSelectedDetail(null) }} type="button">
+              <button className={`desktop-sidebar-item nav-${item.section} ${desktopSection === item.section ? `active active-${item.section}` : ""}`} key={item.section} onClick={() => { onDesktopSectionChange(item.section); setSelectedPersona(null); setSelectedDetail(null) }} type="button">
                 <Icon />
                 <span>{item.label}<small>{item.meta}</small></span>
               </button>
@@ -199,7 +247,7 @@ export function DesktopWorkspace({
         </ConfirmDialog>
       </aside>
 
-      <section className={`desktop-left-panel desktop-left-${desktopSection}`}>
+      <section className={`desktop-left-panel desktop-left-${desktopSection}`} data-tour={desktopSection === "resumen" ? undefined : `desktop-${desktopSection}`}>
         {desktopSection === "personas" ? (
           <>
             <header><h2>Personas</h2><p>Añadí las personas que participan en los gastos.</p></header>
@@ -214,7 +262,7 @@ export function DesktopWorkspace({
           <>
             <header><h2>Movimientos</h2><p>Registrá gastos y transferencias.</p></header>
             <div className="desktop-panel-card desktop-form-stack">
-              <Tabs defaultValue="gasto">
+              <Tabs value={movementTab} onValueChange={(value) => onMovementTabChange(value as "gasto" | "transferencia")}>
                 <TabsList className="tabs-list">
                   <TabsTrigger className="tabs-trigger" value="gasto">Gasto</TabsTrigger>
                   <TabsTrigger className="tabs-trigger" value="transferencia">Transferencia</TabsTrigger>
@@ -261,21 +309,28 @@ export function DesktopWorkspace({
             </div>
             <ScrollArea className="desktop-scroll-list">
               <Table className="desktop-movement-table">
+                <colgroup>
+                  {movementColumnWidths.map((width, index) => <col key={movementHeaders[index]} style={{ width: `${width}%` }} />)}
+                </colgroup>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Movimiento</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Pagó / De</TableHead>
-                    <TableHead>Participantes</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead className="desktop-movement-total">Total</TableHead>
+                    {movementHeaders.map((header, index) => (
+                      <TableHead className={index === movementHeaders.length - 1 ? "desktop-movement-total" : ""} key={header}>
+                        <span>{header}</span>
+                        {index < movementHeaders.length - 1 ? <button aria-label={`Cambiar ancho de ${header}`} className="desktop-column-resizer" onMouseDown={(event) => startMovementColumnResize(index, event)} type="button" /> : null}
+                      </TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pagedMovements.map(({ movimiento, index }) => <DesktopMovementRow key={`${movimiento.tipo}-${index}`} movimiento={movimiento} index={index} onEdit={onEditMovimiento} nombreMovimiento={nombreMovimiento} />)}
                 </TableBody>
               </Table>
-              {pagedMovements.length === 0 ? <Badge className="empty-state-badge">{movimientos.length === 0 ? "Sin movimientos" : "Sin resultados"}</Badge> : null}
+              {pagedMovements.length === 0 ? (
+                <div className="desktop-empty-table-state">
+                  <Badge className="empty-state-badge">{movimientos.length === 0 ? "Sin movimientos" : "Sin resultados"}</Badge>
+                </div>
+              ) : null}
             </ScrollArea>
             <div className="desktop-filter-bar">
               <Button aria-label="Limpiar filtros" className="desktop-clear-filters" onClick={() => { setMovementSearch(""); setMovementType("todos"); setMovementCategory("todas"); setMovementPayer("todos"); setMovementPage(1) }} type="button"><EraserIcon /></Button>
@@ -297,12 +352,17 @@ export function DesktopWorkspace({
                 {pagedSaldos.map((saldo) => {
                   const estado = estadoSaldo(saldo.saldo)
                   return (
-                    <article className="desktop-summary-person-card" key={saldo.persona}>
+                    <article className="desktop-summary-person-card" key={saldo.persona} onClick={() => copyResumenPersona(saldo.persona)} role="button" tabIndex={0} onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault()
+                        copyResumenPersona(saldo.persona)
+                      }
+                    }}>
                       <div className="desktop-summary-card-head"><SlidingText className="desktop-summary-card-name">{saldo.persona}</SlidingText><Badge className={estado.className}>{estado.label}</Badge></div>
-                      <button onClick={() => { setSelectedPersona(saldo.persona); setSelectedDetail("parte") }} type="button">Le tocaba gastar<b>{formatoARS.format(saldo.totalDebidoEnGastos)}</b><ChevronRightIcon /></button>
-                      <button onClick={() => { setSelectedPersona(saldo.persona); setSelectedDetail("gasto") }} type="button">Gastó<b>{formatoARS.format(saldo.totalSalioBolsillo)}</b><ChevronRightIcon /></button>
-                      <button onClick={() => { setSelectedPersona(saldo.persona); setSelectedDetail("recibido") }} type="button">Ya recibió<b>{formatoARS.format(saldo.totalRecibido)}</b><ChevronRightIcon /></button>
-                      <button onClick={() => { setSelectedPersona(saldo.persona); setSelectedDetail("transferencias") }} type="button">Saldo<b className={estado.className}>{formatoARS.format(saldo.saldo)}</b><ChevronRightIcon /></button>
+                      <button onClick={(event) => { event.stopPropagation(); setSelectedPersona(saldo.persona); setSelectedDetail("parte") }} type="button">Le tocaba gastar<b>{formatoARS.format(saldo.totalDebidoEnGastos)}</b><ChevronRightIcon /></button>
+                      <button onClick={(event) => { event.stopPropagation(); setSelectedPersona(saldo.persona); setSelectedDetail("gasto") }} type="button">Gastó<b>{formatoARS.format(saldo.totalSalioBolsillo)}</b><ChevronRightIcon /></button>
+                      <button onClick={(event) => { event.stopPropagation(); setSelectedPersona(saldo.persona); setSelectedDetail("recibido") }} type="button">Ya recibió<b>{formatoARS.format(saldo.totalRecibido)}</b><ChevronRightIcon /></button>
+                      <button onClick={(event) => { event.stopPropagation(); setSelectedPersona(saldo.persona); setSelectedDetail("transferencias") }} type="button">Saldo<b className={estado.className}>{formatoARS.format(saldo.saldo)}</b><ChevronRightIcon /></button>
                     </article>
                   )
                 })}
@@ -318,6 +378,7 @@ export function DesktopWorkspace({
           </section>
         ) : null}
       </main>
+      {desktopSection === "resumen" ? <div className="desktop-tour-resumen-target" data-tour="desktop-resumen" /> : null}
     </div>
   )
 }

@@ -1,0 +1,111 @@
+@media (min-width: 720px) {
+  .desktop-content-card .desktop-scroll-list {
+    position: relative;
+  }
+
+  .desktop-content-card .desktop-scroll-list .scroll-area-viewport {
+    width: 100%;
+  }
+
+  .desktop-movement-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .desktop-movement-table .desktop-movement-name {
+    min-width: 0;
+  }
+
+  .desktop-movement-table .table-head,
+  .desktop-movement-table .table-cell {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .desktop-movement-table .table-head {
+    position: relative;
+  }
+
+  .desktop-movement-table .table-head > span {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .desktop-movement-total {
+    text-align: right;
+  }
+
+  .desktop-movement-total strong {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .desktop-column-resizer {
+    position: absolute;
+    top: 0.35rem;
+    right: -0.25rem;
+    bottom: 0.35rem;
+    z-index: 2;
+    width: 0.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    cursor: col-resize;
+  }
+
+  .desktop-column-resizer:hover {
+    background: rgb(109 40 217 / 0.28);
+  }
+
+  body.is-resizing-column {
+    cursor: col-resize;
+    user-select: none;
+  }
+
+  .desktop-scroll-list .scroll-area-viewport {
+    overflow-x: hidden !important;
+  }
+
+  .desktop-scroll-list .scroll-area-scrollbar[data-orientation="horizontal"] {
+    display: none;
+  }
+
+  .desktop-person-list:has(.empty-state-badge),
+  .desktop-summary-card-grid:has(.empty-state-badge) {
+    display: grid;
+    min-height: 100%;
+    align-items: center;
+    justify-items: center;
+  }
+
+  .desktop-empty-table-state {
+    display: grid;
+    flex: 1;
+    min-height: 0;
+    align-items: center;
+    justify-items: center;
+  }
+
+  .desktop-scroll-list:has(.desktop-empty-table-state) .scroll-area-viewport > div {
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+  }
+
+  .desktop-shell {
+    position: relative;
+  }
+
+  .desktop-tour-resumen-target {
+    position: absolute;
+    z-index: 1;
+    inset: 0 0 0 280px;
+    pointer-events: none;
+  }
+}

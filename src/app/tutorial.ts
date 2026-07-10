@@ -1,4 +1,5 @@
 import type { AppState } from "../types"
+import { isMobileViewport } from "../lib/viewport"
 
 export type MobileSection = "personas" | "movimientos" | "resumen"
 export type TutorialDemo = "personas" | "movimientos" | "resumen"
@@ -25,7 +26,7 @@ const tutorialMockState = {
   ],
 } satisfies AppState
 
-export const tutorialStepsConfig: TutorialStepConfig[] = [
+export const mobileTutorialStepsConfig: TutorialStepConfig[] = [
   {
     section: "personas",
     selector: "[data-tour='bottom-nav']",
@@ -68,6 +69,47 @@ export const tutorialStepsConfig: TutorialStepConfig[] = [
     description: "Desde acá podés graficar gastos por categoría, revisar cálculos paso a paso o limpiar todos los datos.",
   },
 ]
+
+export const desktopTutorialStepsConfig: TutorialStepConfig[] = [
+  {
+    section: "personas",
+    selector: "[data-tour='desktop-sidebar']",
+    title: "Navegá por secciones",
+    description: "Usá la barra lateral para moverte entre Personas, Movimientos y Resumen.",
+  },
+  {
+    section: "personas",
+    selector: "[data-tour='desktop-personas']",
+    demo: "personas",
+    title: "Añadí personas",
+    description: "Cargá las personas desde el panel izquierdo y revisá el listado del grupo a la derecha.",
+  },
+  {
+    section: "movimientos",
+    selector: "[data-tour='desktop-movimientos']",
+    demo: "movimientos",
+    title: "Añadí gastos y transferencias",
+    description: "Registrá gastos y pagos realizados desde el formulario. La tabla de la derecha muestra todo lo cargado.",
+  },
+  {
+    section: "resumen",
+    selector: "[data-tour='desktop-resumen']",
+    demo: "resumen",
+    title: "Revisá el resumen",
+    description: "Acá ves totales, gráfico por categoría, saldos por persona y el botón para repartir.",
+  },
+  {
+    section: "resumen",
+    selector: "[data-tour='repartir-dialog']",
+    fallback: "[data-tour='desktop-resumen']",
+    title: "Estas son las transferencias que hay que hacer",
+    description: "Presiona \"Compartir\" para pasarselo a los demás.",
+  },
+]
+
+export function getTutorialStepsConfig() {
+  return isMobileViewport() ? mobileTutorialStepsConfig : desktopTutorialStepsConfig
+}
 
 export function nextPaint() {
   return new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
