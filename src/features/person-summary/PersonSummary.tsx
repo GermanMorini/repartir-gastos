@@ -1,23 +1,25 @@
-import { ArrowDownLeftIcon, ArrowLeftIcon, ArrowUpRightIcon, ChartPie, ChevronLeftIcon, ChevronRightIcon, ShareIcon, UsersIcon, WalletCardsIcon } from "lucide-react"
+import { ArrowLeftIcon, ArrowRightLeftIcon, ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, ShareIcon, UsersIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { CategoriaIcon } from "../../components/shared/CategoryBadge"
 import { SlidingText } from "../../components/shared/SlidingText"
 import { Avatar, AvatarFallback, Badge, Button, Card, Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, ScrollArea, Separator } from "../../components/ui"
 import type { CarouselApi } from "../../components/ui"
-import { getResumenPersona } from "../../lib/calculos"
+import { calcularSaldos, calcularTransferenciasPendientes, getResumenPersona } from "../../lib/calculos"
 import { formatoARS } from "../../lib/money"
 import { nombreMovimiento } from "../../lib/share-text"
 import type { Movimiento, Persona } from "../../types"
 import "./person-summary.css"
 
 type ResumenPersona = ReturnType<typeof getResumenPersona>
-type DetailView = "parte" | "pago" | "recibido" | "transferido"
+type DetailView = "parte" | "gasto" | "recibido" | "transferencias"
+type PendingPersonTransfer = { tipo: "pagar" | "recibir"; persona: Persona; monto: number }
 
 type PersonSummaryProps = {
   personas: Persona[]
   movimientos: Movimiento[]
   initialPersona?: Persona | null
+  initialDetail?: DetailView | null
   readOnly?: boolean
   title?: string
   onBack?: () => void
@@ -45,8 +47,9 @@ function PersonAvatar({ persona, className = "" }: { persona: Persona; className
   return <Avatar className={className}><AvatarFallback>{iniciales(persona)}</AvatarFallback></Avatar>
 }
 
-function PersonCarousel({ personas, selected, onSelect }: { personas: Persona[]; selected: Persona; onSelect: (persona: Persona) => void }) {
+function PersonCarousel({ personas, selected, onSelect, renderItem, showArrows = true, showPagination = false }: { personas: Persona[]; selected: Persona; onSelect: (persona: Persona) => void; renderItem?: (persona: Persona) => ReactNode; showArrows?: boolean; showPagination?: boolean }) {
   const [api, setApi] = useState<CarouselApi>()
+  const selectedIndex = Math.max(0, personas.indexOf(selected))
 
   useEffect(() => {
     if (!api) return
@@ -69,61 +72,63 @@ function PersonCarousel({ personas, selected, onSelect }: { personas: Persona[];
 
   return (
     <Carousel className="person-carousel" setApi={setApi}>
-      <CarouselPrevious className="btn-outline person-carousel-arrow" />
+      {showArrows ? <CarouselPrevious className="btn-outline person-carousel-arrow" /> : null}
       <CarouselContent className="person-carousel-track">
         {personas.map((persona) => (
           <CarouselItem className="person-carousel-item" key={persona}>
-            <button className={`person-pill ${persona === selected ? "is-active" : ""}`} onClick={() => { onSelect(persona); api?.scrollTo(personas.indexOf(persona)) }} type="button">
-              <PersonAvatar persona={persona} />
-              <strong>{persona}</strong>
-              <span>{personas.indexOf(persona) + 1} de {personas.length}</span>
-            </button>
+            {renderItem ? renderItem(persona) : (
+              <button className={`person-pill ${persona === selected ? "is-active" : ""}`} onClick={() => { onSelect(persona); api?.scrollTo(personas.indexOf(persona)) }} type="button">
+                <PersonAvatar persona={persona} />
+                <strong>{persona}</strong>
+                <span>{personas.indexOf(persona) + 1} de {personas.length}</span>
+              </button>
+            )}
           </CarouselItem>
         ))}
       </CarouselContent>
-      <CarouselNext className="btn-outline person-carousel-arrow" />
+      {showArrows ? <CarouselNext className="btn-outline person-carousel-arrow" /> : null}
+      {showPagination ? (
+        <div className="person-carousel-pagination">
+          <span>{selectedIndex + 1} de {personas.length}</span>
+          <div>
+            {personas.map((persona, index) => <button aria-label={`Ver ${persona}`} className={index === selectedIndex ? "active" : ""} key={persona} onClick={() => { onSelect(persona); api?.scrollTo(index) }} type="button" />)}
+          </div>
+        </div>
+      ) : null}
     </Carousel>
   )
 }
 
-function SummaryStats({ resumen }: { resumen: ResumenPersona }) {
+function pendingForPersona(persona: Persona, personas: Persona[], movimientos: Movimiento[]) {
+  return calcularTransferenciasPendientes(calcularSaldos(personas, movimientos)).flatMap((transferencia): PendingPersonTransfer[] => {
+    if (transferencia.de === persona) return [{ tipo: "pagar", persona: transferencia.a, monto: transferencia.monto }]
+    if (transferencia.a === persona) return [{ tipo: "recibir", persona: transferencia.de, monto: transferencia.monto }]
+    return []
+  })
+}
+
+function SummaryActionRow({ label, amount, className = "", onClick }: { label: string; amount: ReactNode; className?: string; onClick?: () => void }) {
+  const content = <><span>{label}</span><strong className={className}>{amount}</strong>{onClick ? <ChevronRightIcon /> : null}</>
+  return onClick ? <button className="ps-stat-row" onClick={onClick} type="button">{content}</button> : <span className="ps-stat-row">{content}</span>
+}
+
+function SummaryStats({ resumen, onOpen, saldoClickable = false, showTransferButton = false }: { resumen: ResumenPersona; onOpen?: (view: DetailView) => void; saldoClickable?: boolean; showTransferButton?: boolean }) {
   const estado = estadoSaldo(resumen.saldo)
   return (
     <Card className="ps-stats">
       <h2>Resumen de {resumen.persona} <Badge className={estado.className}>{estado.label}</Badge></h2>
       <div>
-        <span>Le tocaba gastar<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></span>
-        <span>Gastó<strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></span>
-        <span>Ya recibió<strong>{formatoARS.format(resumen.totalRecibido)}</strong></span>
-        <span>Saldo<strong className={estado.className}>{formatoARS.format(resumen.saldo)}</strong></span>
+        <SummaryActionRow label="Le tocaba gastar" amount={formatoARS.format(resumen.totalLeTocaba)} onClick={onOpen ? () => onOpen("parte") : undefined} />
+        <SummaryActionRow label="Gastó" amount={formatoARS.format(resumen.totalSalioBolsillo)} onClick={onOpen ? () => onOpen("gasto") : undefined} />
+        <SummaryActionRow label="Ya recibió" amount={formatoARS.format(resumen.totalRecibido)} onClick={onOpen ? () => onOpen("recibido") : undefined} />
+        <SummaryActionRow label="Saldo" amount={formatoARS.format(resumen.saldo)} className={estado.className} onClick={saldoClickable && onOpen ? () => onOpen("transferencias") : undefined} />
       </div>
+      {showTransferButton && onOpen ? <Button className="btn-outline ps-transfer-button" onClick={() => onOpen("transferencias")} type="button">¿A quién le transfiero?</Button> : null}
     </Card>
   )
 }
 
-function DetailButton({ icon, title, subtitle, amount, view, onClick }: { icon: ReactNode; title: string; subtitle: string; amount: number; view: DetailView; onClick?: () => void }) {
-  return (
-    <button className={`ps-detail-button ps-detail-${view}`} onClick={onClick} type="button">
-      <span className="ps-detail-icon">{icon}</span>
-      <span><strong>{title}</strong><small>{subtitle}</small></span>
-      <b>{formatoARS.format(amount)}</b>
-      <ChevronRightIcon />
-    </button>
-  )
-}
-
-function PersonSummaryCards({ resumen, onOpen }: { resumen: ResumenPersona; onOpen?: (view: DetailView) => void }) {
-  return (
-    <div className="ps-card-list">
-      <DetailButton icon={<ChartPie />} title="Su parte de los gastos" subtitle="Lo que le corresponde de cada gasto" amount={resumen.totalLeTocaba} view="parte" onClick={() => onOpen?.("parte")} />
-      <DetailButton icon={<WalletCardsIcon />} title="Lo que pagó" subtitle="Gastos que pagó" amount={resumen.totalPuesto} view="pago" onClick={() => onOpen?.("pago")} />
-      <DetailButton icon={<ArrowDownLeftIcon />} title="Lo que le transfirieron" subtitle="Transferencias que recibió" amount={resumen.totalRecibido} view="recibido" onClick={() => onOpen?.("recibido")} />
-      <DetailButton icon={<ArrowUpRightIcon />} title="Lo que transfirió" subtitle="Transferencias que envió" amount={resumen.totalTransferido} view="transferido" onClick={() => onOpen?.("transferido")} />
-    </div>
-  )
-}
-
-function DetailRows({ resumen, view }: { resumen: ResumenPersona; view: DetailView }) {
+function DetailRows({ resumen, view, pendientes }: { resumen: ResumenPersona; view: DetailView; pendientes: PendingPersonTransfer[] }) {
   if (view === "parte") return (
     <>
       {resumen.gastosDondeParticipo.map(({ movimiento, montoParte }, index) => (
@@ -131,23 +136,29 @@ function DetailRows({ resumen, view }: { resumen: ResumenPersona; view: DetailVi
       ))}
     </>
   )
-  if (view === "pago") return (
-    <>{resumen.gastosQuePago.map((movimiento, index) => <p className="ps-part-row" key={`${view}-${index}`}><span className="ps-row-icon"><CategoriaIcon categoria={movimiento.categoria} /></span><span><strong>{nombreMovimiento(movimiento)}</strong></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}</>
+  if (view === "gasto") return (
+    <>
+      {resumen.gastosQuePago.map((movimiento, index) => <p className="ps-part-row" key={`gasto-${index}`}><span className="ps-row-icon"><CategoriaIcon categoria={movimiento.categoria} /></span><span><strong>{nombreMovimiento(movimiento)}</strong></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}
+      {resumen.transferenciasEnviadas.map((movimiento, index) => <p className="ps-part-row" key={`transferido-${index}`}><span className="ps-row-icon ps-transfer-icon"><ArrowUpRightIcon /></span><span><strong>A {movimiento.a}</strong><small>Pago realizado</small></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}
+    </>
   )
   if (view === "recibido") return (
     <>{resumen.transferenciasRecibidas.map((movimiento, index) => <p key={`${view}-${index}`}><span><strong>De {movimiento.de}</strong></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}</>
   )
   return (
-    <>{resumen.transferenciasEnviadas.map((movimiento, index) => <p key={`${view}-${index}`}><span><strong>A {movimiento.a}</strong></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}</>
+    <>
+      {pendientes.map((transferencia, index) => <p className="ps-part-row" key={`${transferencia.tipo}-${transferencia.persona}-${index}`}><span className="ps-row-icon ps-transfer-icon"><ArrowRightLeftIcon /></span><span><strong>{transferencia.tipo === "pagar" ? `A ${transferencia.persona}` : `De ${transferencia.persona}`}</strong><small>Transferencia sugerida</small></span><b>{formatoARS.format(transferencia.monto)}</b></p>)}
+      {pendientes.length === 0 ? <p className="empty">No hay transferencias pendientes.</p> : null}
+    </>
   )
 }
 
-function DetailList({ resumen, view, onBack, closing = false }: { resumen: ResumenPersona; view: DetailView; onBack?: () => void; closing?: boolean }) {
+function DetailList({ resumen, view, pendientes, onBack, closing = false }: { resumen: ResumenPersona; view: DetailView; pendientes: PendingPersonTransfer[]; onBack?: () => void; closing?: boolean }) {
   const titles = {
     parte: ["Su parte de los gastos", "Lo que le corresponde de cada gasto", resumen.totalLeTocaba],
-    pago: ["Lo que pagó", "Gastos que pagó", resumen.totalPuesto],
+    gasto: ["Lo que pagó", "Gastos que pagó y pagos realizados", resumen.totalSalioBolsillo],
     recibido: ["Lo que le transfirieron", "Transferencias que recibió", resumen.totalRecibido],
-    transferido: ["Lo que transfirió", "Transferencias que envió", resumen.totalTransferido],
+    transferencias: ["Transferencias", resumen.saldo < 0 ? "Lo que deberías transferir" : "Lo que deberían transferirte", Math.abs(resumen.saldo)],
   } as const
   const [title, subtitle, amount] = titles[view]
 
@@ -158,8 +169,8 @@ function DetailList({ resumen, view, onBack, closing = false }: { resumen: Resum
       <Separator />
       <ScrollArea className="ps-detail-scroll">
         <div>
-          <DetailRows resumen={resumen} view={view} />
-          {!resumen.tieneMovimientos ? <p className="empty">{resumen.persona} todavía no tiene movimientos.</p> : null}
+          <DetailRows pendientes={pendientes} resumen={resumen} view={view} />
+          {view !== "transferencias" && !resumen.tieneMovimientos ? <p className="empty">{resumen.persona} todavía no tiene movimientos.</p> : null}
         </div>
       </ScrollArea>
     </Card>
@@ -171,6 +182,7 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
   const [detail, setDetail] = useState<DetailView | "cards">("cards")
   const [closingDetail, setClosingDetail] = useState(false)
   const resumen = useMemo(() => getResumenPersona(selected, movimientos), [movimientos, selected])
+  const pendientesPersona = useMemo(() => pendingForPersona(selected, personas, movimientos), [movimientos, personas, selected])
   useEffect(() => { setDetail("cards"); setClosingDetail(false) }, [selected])
   const openDetail = (view: DetailView) => { setClosingDetail(false); setDetail(view) }
   const closeDetail = () => {
@@ -188,22 +200,34 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
       </header>
       <ScrollArea className="ps-mobile-scroll">
         <PersonCarousel personas={personas} selected={selected} onSelect={setSelected} />
-        <SummaryStats resumen={resumen} />
-        {detail === "cards" ? <PersonSummaryCards resumen={resumen} onOpen={openDetail} /> : <DetailList closing={closingDetail} resumen={resumen} view={detail} onBack={closeDetail} />}
+        <SummaryStats resumen={resumen} showTransferButton onOpen={openDetail} />
+        {detail !== "cards" ? <DetailList closing={closingDetail} pendientes={pendientesPersona} resumen={resumen} view={detail} onBack={closeDetail} /> : null}
       </ScrollArea>
     </main>
   )
 }
 
-export function PersonSummaryDesktopView({ personas, movimientos, initialPersona, onBack, readOnly = false }: PersonSummaryProps) {
+export function PersonSummaryDesktopView({ personas, movimientos, initialPersona, initialDetail = null, onBack, readOnly = false }: PersonSummaryProps) {
   const [selected, setSelected] = useSelectedPersona(personas, initialPersona)
   const [detail, setDetail] = useState<DetailView | "cards">("cards")
+  const [closingDetail, setClosingDetail] = useState(false)
   const resumen = useMemo(() => getResumenPersona(selected, movimientos), [movimientos, selected])
+  const pendientesPersona = useMemo(() => pendingForPersona(selected, personas, movimientos), [movimientos, personas, selected])
   const estado = estadoSaldo(resumen.saldo)
+  useEffect(() => {
+    if (!readOnly) {
+      setClosingDetail(false)
+      setDetail(initialDetail ?? "cards")
+    }
+  }, [initialDetail, readOnly, selected])
+  const closeDetail = () => {
+    setClosingDetail(true)
+    window.setTimeout(() => { setDetail("cards"); setClosingDetail(false) }, 180)
+  }
 
   if (!selected) return null
   return (
-    <div className="ps-desktop-view">
+    <div className={`ps-desktop-view${readOnly ? " is-readonly" : ""}`}>
       <header className="ps-desktop-head">
         {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ChevronLeftIcon />Volver al listado</Button> : null}
         {readOnly ? <span className="ps-share-logo"><UsersIcon /></span> : null}
@@ -212,20 +236,39 @@ export function PersonSummaryDesktopView({ personas, movimientos, initialPersona
           <p>Revisá cuánto debe pagar o recibir cada persona.</p>
         </div>
       </header>
-      {readOnly ? <PersonCarousel personas={personas} selected={selected} onSelect={(persona) => { setSelected(persona); setDetail("cards") }} /> : null}
-      <div className="ps-desktop-detail">
+      {readOnly ? <PersonCarousel personas={personas} selected={selected} showArrows={false} showPagination onSelect={(persona) => { setSelected(persona); setDetail("cards") }} renderItem={(persona) => <SummaryStats resumen={getResumenPersona(persona, movimientos)} saldoClickable onOpen={(view) => { setSelected(persona); setDetail(view) }} />} /> : null}
+      {!readOnly ? <div className="ps-desktop-detail">
         <aside>
           <SlidingText className="ps-side-name">{resumen.persona}</SlidingText>
           <Badge className={estado.className}>{estado.label}</Badge>
           <Separator />
-          <span className="ps-side-stat">Le tocaba gastar<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong></span>
-          <span className="ps-side-stat">Gastó<strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong></span>
-          <span className="ps-side-stat">Ya recibió<strong>{formatoARS.format(resumen.totalRecibido)}</strong></span>
-          <span className="ps-side-stat">Saldo<strong className={estado.className}>{formatoARS.format(resumen.saldo)}</strong></span>
+          <button className="ps-side-stat" onClick={() => setDetail("parte")} type="button">Le tocaba gastar<strong>{formatoARS.format(resumen.totalLeTocaba)}</strong><ChevronRightIcon /></button>
+          <button className="ps-side-stat" onClick={() => setDetail("gasto")} type="button">Gastó<strong>{formatoARS.format(resumen.totalSalioBolsillo)}</strong><ChevronRightIcon /></button>
+          <button className="ps-side-stat" onClick={() => setDetail("recibido")} type="button">Ya recibió<strong>{formatoARS.format(resumen.totalRecibido)}</strong><ChevronRightIcon /></button>
+          <button className="ps-side-stat" onClick={() => setDetail("transferencias")} type="button">Saldo<strong className={estado.className}>{formatoARS.format(resumen.saldo)}</strong><ChevronRightIcon /></button>
         </aside>
         <section>
-          {detail === "cards" ? <PersonSummaryCards resumen={resumen} onOpen={setDetail} /> : <DetailList resumen={resumen} view={detail} onBack={() => setDetail("cards")} />}
+          <p className="empty">Elegí una línea del resumen para ver el detalle.</p>
         </section>
+      </div> : null}
+      {detail !== "cards" ? <div className="ps-desktop-drawer" onClick={closeDetail}><div onClick={(event) => event.stopPropagation()}><DetailList closing={closingDetail} pendientes={pendientesPersona} resumen={resumen} view={detail} onBack={closeDetail} /></div></div> : null}
+    </div>
+  )
+}
+
+export function PersonSummaryDesktopDrawer({ personas, movimientos, persona, detail, onClose }: { personas: Persona[]; movimientos: Movimiento[]; persona: Persona; detail: DetailView; onClose: () => void }) {
+  const [closingDetail, setClosingDetail] = useState(false)
+  const resumen = useMemo(() => getResumenPersona(persona, movimientos), [movimientos, persona])
+  const pendientesPersona = useMemo(() => pendingForPersona(persona, personas, movimientos), [movimientos, persona, personas])
+  const closeDetail = () => {
+    setClosingDetail(true)
+    window.setTimeout(onClose, 180)
+  }
+
+  return (
+    <div className="ps-desktop-drawer" onClick={closeDetail}>
+      <div onClick={(event) => event.stopPropagation()}>
+        <DetailList closing={closingDetail} pendientes={pendientesPersona} resumen={resumen} view={detail} onBack={closeDetail} />
       </div>
     </div>
   )

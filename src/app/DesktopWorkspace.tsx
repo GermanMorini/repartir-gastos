@@ -3,7 +3,7 @@ import { useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { ConfirmDialog } from "../components/shared/ConfirmDialog"
 import { CategoriaIcon, CategoryBadge } from "../components/shared/CategoryBadge"
-import { PersonSummaryDesktopView } from "../features/person-summary/PersonSummary"
+import { PersonSummaryDesktopDrawer } from "../features/person-summary/PersonSummary"
 import { PersonaForm } from "../sections/personas/PersonaForm"
 import { PersonaItem } from "../sections/personas/PersonaItem"
 import { SlidingText } from "../components/shared/SlidingText"
@@ -15,6 +15,7 @@ import type { Movimiento, Persona, ResumenCategoria, SaldoPersona, Transferencia
 import { Badge, Button, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
 
 type DesktopSection = "personas" | "movimientos" | "resumen"
+type SummaryDetail = "parte" | "gasto" | "recibido" | "transferencias"
 type DesktopWorkspaceProps = {
   personas: Persona[]
   nombre: string
@@ -134,6 +135,7 @@ export function DesktopWorkspace({
   const [summarySearch, setSummarySearch] = useState("")
   const [summarySort, setSummarySort] = useState("nombre")
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null)
+  const [selectedDetail, setSelectedDetail] = useState<SummaryDetail | null>(null)
 
   const filteredMovements = useMemo(() => {
     const text = movementSearch.trim().toLowerCase()
@@ -180,7 +182,7 @@ export function DesktopWorkspace({
           {navItems.map((item) => {
             const Icon = item.icon
             return (
-              <button className={`desktop-sidebar-item nav-${item.section} ${desktopSection === item.section ? `active active-${item.section}` : ""}`} key={item.section} onClick={() => { setDesktopSection(item.section); setSelectedPersona(null) }} type="button">
+              <button className={`desktop-sidebar-item nav-${item.section} ${desktopSection === item.section ? `active active-${item.section}` : ""}`} key={item.section} onClick={() => { setDesktopSection(item.section); setSelectedPersona(null); setSelectedDetail(null) }} type="button">
                 <Icon />
                 <span>{item.label}<small>{item.meta}</small></span>
               </button>
@@ -284,33 +286,30 @@ export function DesktopWorkspace({
 
         {desktopSection === "resumen" ? (
           <section className="desktop-content-card">
-            {!selectedPersona ? (
-              <>
-                <div className="desktop-content-head"><div><h2>Saldos por persona</h2><p>{filteredSaldos.length} personas</p></div></div>
-                <ScrollArea className="desktop-scroll-list">
-                  <div className="desktop-summary-card-grid">
-                    {pagedSaldos.map((saldo) => {
-                      const estado = estadoSaldo(saldo.saldo)
-                      return (
-                        <button className="desktop-summary-person-card" key={saldo.persona} onClick={() => setSelectedPersona(saldo.persona)} type="button">
-                          <header><SlidingText className="desktop-summary-card-name">{saldo.persona}</SlidingText><Badge className={estado.className}>{estado.label}</Badge></header>
-                          <span>Le tocaba gastar<b>{formatoARS.format(saldo.totalDebidoEnGastos)}</b></span>
-                          <span>Gastó<b>{formatoARS.format(saldo.totalSalioBolsillo)}</b></span>
-                          <span>Ya recibió<b>{formatoARS.format(saldo.totalRecibido)}</b></span>
-                          <span>Saldo<b className={estado.className}>{formatoARS.format(saldo.saldo)}</b></span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </ScrollArea>
-                <div className="desktop-filter-bar">
-                  <Button aria-label="Limpiar filtros" className="desktop-clear-filters" onClick={() => { setSummarySearch(""); setSummarySort("nombre"); setSummaryPage(1) }} type="button"><EraserIcon /></Button>
-                  <label className="desktop-filter-search"><SearchIcon data-icon="inline-start" /><Input placeholder="Buscar por nombre..." value={summarySearch} onChange={(event) => { setSummarySearch(event.target.value); setSummaryPage(1) }} /></label>
-                  <div className="desktop-filter-control desktop-filter-sort"><span>Ordenar por</span><Select value={summarySort} onValueChange={setSummarySort}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="nombre">Nombre</SelectItem><SelectItem value="saldo">Saldo</SelectItem><SelectItem value="parte">Parte</SelectItem><SelectItem value="gasto">Gastó</SelectItem></SelectGroup></SelectContent></Select></div>
-                  <Pagination page={currentSummaryPage} totalPages={summaryTotalPages} onPage={setSummaryPage} />
-                </div>
-              </>
-            ) : <PersonSummaryDesktopView initialPersona={selectedPersona} movimientos={movimientos} onBack={() => setSelectedPersona(null)} personas={personas} />}
+            <div className="desktop-content-head"><div><h2>Saldos por persona</h2><p>{filteredSaldos.length} personas</p></div></div>
+            <ScrollArea className="desktop-scroll-list">
+              <div className="desktop-summary-card-grid">
+                {pagedSaldos.map((saldo) => {
+                  const estado = estadoSaldo(saldo.saldo)
+                  return (
+                    <article className="desktop-summary-person-card" key={saldo.persona}>
+                      <div className="desktop-summary-card-head"><SlidingText className="desktop-summary-card-name">{saldo.persona}</SlidingText><Badge className={estado.className}>{estado.label}</Badge></div>
+                      <button onClick={() => { setSelectedPersona(saldo.persona); setSelectedDetail("parte") }} type="button">Le tocaba gastar<b>{formatoARS.format(saldo.totalDebidoEnGastos)}</b><ChevronRightIcon /></button>
+                      <button onClick={() => { setSelectedPersona(saldo.persona); setSelectedDetail("gasto") }} type="button">Gastó<b>{formatoARS.format(saldo.totalSalioBolsillo)}</b><ChevronRightIcon /></button>
+                      <button onClick={() => { setSelectedPersona(saldo.persona); setSelectedDetail("recibido") }} type="button">Ya recibió<b>{formatoARS.format(saldo.totalRecibido)}</b><ChevronRightIcon /></button>
+                      <button onClick={() => { setSelectedPersona(saldo.persona); setSelectedDetail("transferencias") }} type="button">Saldo<b className={estado.className}>{formatoARS.format(saldo.saldo)}</b><ChevronRightIcon /></button>
+                    </article>
+                  )
+                })}
+              </div>
+            </ScrollArea>
+            <div className="desktop-filter-bar">
+              <Button aria-label="Limpiar filtros" className="desktop-clear-filters" onClick={() => { setSummarySearch(""); setSummarySort("nombre"); setSummaryPage(1) }} type="button"><EraserIcon /></Button>
+              <label className="desktop-filter-search"><SearchIcon data-icon="inline-start" /><Input placeholder="Buscar por nombre..." value={summarySearch} onChange={(event) => { setSummarySearch(event.target.value); setSummaryPage(1) }} /></label>
+              <div className="desktop-filter-control desktop-filter-sort"><span>Ordenar por</span><Select value={summarySort} onValueChange={setSummarySort}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="nombre">Nombre</SelectItem><SelectItem value="saldo">Saldo</SelectItem><SelectItem value="parte">Parte</SelectItem><SelectItem value="gasto">Gastó</SelectItem></SelectGroup></SelectContent></Select></div>
+              <Pagination page={currentSummaryPage} totalPages={summaryTotalPages} onPage={setSummaryPage} />
+            </div>
+            {selectedPersona && selectedDetail ? <PersonSummaryDesktopDrawer detail={selectedDetail} movimientos={movimientos} onClose={() => { setSelectedPersona(null); setSelectedDetail(null) }} persona={selectedPersona} personas={personas} /> : null}
           </section>
         ) : null}
       </main>

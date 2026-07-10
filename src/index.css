@@ -2577,6 +2577,28 @@ body {
 }
 
 @media (min-width: 720px) {
+  [data-sonner-toaster][data-y-position="bottom"] {
+    --width: 420px !important;
+    left: 300px !important;
+    right: auto !important;
+    bottom: 1.5rem !important;
+    width: 420px !important;
+  }
+
+  [data-sonner-toast] {
+    min-height: 4.5rem;
+    padding: 1rem 1.15rem !important;
+    font-size: 1.08rem !important;
+  }
+
+  [data-sonner-toast] [data-title] {
+    font-size: 1.12rem !important;
+  }
+
+  [data-sonner-toast] [data-description] {
+    font-size: 1rem !important;
+  }
+
   .desktop-shell {
     display: grid;
     height: 100dvh;
@@ -3310,15 +3332,14 @@ body {
     text-align: left;
   }
 
-  .desktop-summary-person-card:hover {
-    border-color: #a78bfa;
-    box-shadow: 0 0 0 1px #c4b5fd;
-  }
-
-  .desktop-summary-person-card > header {
+  .desktop-summary-card-head {
     display: grid;
     justify-items: start;
     gap: 0.35rem;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-align: left;
     min-width: 0;
   }
 
@@ -3332,33 +3353,39 @@ body {
     line-height: 1.15;
   }
 
-  .desktop-summary-person-card > header .badge {
+  .desktop-summary-card-head .badge {
     justify-self: start;
     background: rgb(0 122 53 / 0.12);
     color: var(--primary);
     font-size: 0.88rem;
   }
 
-  .desktop-summary-person-card > header .badge.negative {
+  .desktop-summary-card-head .badge.negative {
     background: rgb(217 45 32 / 0.12);
     color: #d92d20 !important;
   }
 
-  .desktop-summary-person-card > header .badge.neutral {
+  .desktop-summary-card-head .badge.neutral {
     background: rgb(83 96 120 / 0.12);
     color: #536078 !important;
   }
 
-  .desktop-summary-person-card > span {
+  .desktop-summary-person-card > button:not(.desktop-summary-card-head) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto 1rem;
     align-items: baseline;
     gap: 0.75rem;
     border-top: 1px solid var(--border);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    background: transparent;
     color: #536078;
     font-size: 0.98rem;
     font-weight: 800;
     padding-top: 0.55rem;
+    text-align: left;
+    cursor: pointer;
   }
 
   .desktop-summary-person-card b {
@@ -3367,6 +3394,13 @@ body {
     font-weight: 950;
     text-align: right;
     white-space: nowrap;
+  }
+
+  .desktop-summary-person-card > button:not(.desktop-summary-card-head) svg {
+    width: 1rem;
+    height: 1rem;
+    align-self: center;
+    color: #98a2b3;
   }
 
   .desktop-summary-card h3 {

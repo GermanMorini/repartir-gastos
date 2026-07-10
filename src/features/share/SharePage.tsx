@@ -20,7 +20,7 @@ export function SharePage({ payload }: { payload: string }) {
   if (!decoded.state) {
     return (
       <main className="share-page share-error">
-        <Toaster richColors position="top-center" />
+        <Toaster richColors position={isMobile ? "top-center" : "bottom-left"} />
         <h1>No se pudo abrir este resumen compartido.</h1>
         {decoded.error ? <p>{decoded.error}</p> : null}
       </main>
@@ -29,7 +29,7 @@ export function SharePage({ payload }: { payload: string }) {
 
   return (
     <main className="share-page">
-      <Toaster richColors position="top-center" />
+      <Toaster richColors position={isMobile ? "top-center" : "bottom-left"} />
       {isMobile ? (
         <PersonSummaryMobilePage movimientos={decoded.state.movimientos} personas={decoded.state.personas} readOnly />
       ) : (

@@ -479,7 +479,7 @@ function EditableApp() {
 
   return (
     <main className="app-bg">
-      <Toaster richColors position="top-center" />
+      <Toaster richColors position={isMobile ? "top-center" : "bottom-left"} />
       <Dialog open={tutorialDialogOpen} onOpenChange={cerrarTutorialDialog}>
         <DialogContent className="tutorial-dialog">
           <DialogTitle>¿Primera vez usando la app?</DialogTitle>
