@@ -1,8 +1,9 @@
-import { ArrowLeftIcon, ArrowRightLeftIcon, ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, ShareIcon, UsersIcon } from "lucide-react"
+import { ArrowLeftIcon, ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon, MoveDownLeft, MoveUpRight, ShareIcon, UsersIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import { CategoriaIcon } from "../../components/shared/CategoryBadge"
 import { SlidingText } from "../../components/shared/SlidingText"
+import { toast } from "sonner"
 import { Avatar, AvatarFallback, Badge, Button, Card, Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, ScrollArea, Separator } from "../../components/ui"
 import type { CarouselApi } from "../../components/ui"
 import { calcularSaldos, calcularTransferenciasPendientes, getResumenPersona } from "../../lib/calculos"
@@ -36,6 +37,12 @@ function estadoSaldo(saldo: number) {
   if (centavos > 0) return { label: "A favor", className: "positive" }
   if (centavos < 0) return { label: "Debe", className: "negative" }
   return { label: "Al día", className: "neutral" }
+}
+
+function copyAmount(monto: number) {
+  navigator.clipboard.writeText(formatoARS.format(monto))
+    .then(() => toast.success("Monto copiado."))
+    .catch(() => toast.error("No se pudo copiar el monto."))
 }
 
 function useSelectedPersona(personas: Persona[], initialPersona?: Persona | null) {
@@ -146,9 +153,32 @@ function DetailRows({ resumen, view, pendientes }: { resumen: ResumenPersona; vi
   if (view === "recibido") return (
     <>{resumen.transferenciasRecibidas.map((movimiento, index) => <p key={`${view}-${index}`}><span><strong>De {movimiento.de}</strong></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}</>
   )
+  const esDeudor = resumen.saldo < 0
+  const Icon = resumen.saldo > 0 ? MoveDownLeft : MoveUpRight
+  const iconClass = resumen.saldo > 0 ? "ps-transfer-credit" : "ps-transfer-debt"
+
   return (
     <>
-      {pendientes.map((transferencia, index) => <p className="ps-part-row" key={`${transferencia.tipo}-${transferencia.persona}-${index}`}><span className="ps-row-icon ps-transfer-icon"><ArrowRightLeftIcon /></span><span><strong>{transferencia.tipo === "pagar" ? `A ${transferencia.persona}` : `De ${transferencia.persona}`}</strong></span><b>{formatoARS.format(transferencia.monto)}</b></p>)}
+      {pendientes.map((transferencia, index) => {
+        const label = transferencia.tipo === "pagar" ? `A ${transferencia.persona}` : `De ${transferencia.persona}`
+        const content = (
+          <>
+            <span className={`ps-row-icon ps-transfer-icon ${iconClass}`}><Icon /></span>
+            <span><strong>{label}</strong></span>
+            <b>{formatoARS.format(transferencia.monto)}</b>
+          </>
+        )
+
+        return esDeudor ? (
+          <button className="ps-part-row ps-part-button" key={`${transferencia.tipo}-${transferencia.persona}-${index}`} onClick={() => copyAmount(transferencia.monto)} type="button">
+            {content}
+          </button>
+        ) : (
+          <p className="ps-part-row" key={`${transferencia.tipo}-${transferencia.persona}-${index}`}>
+            {content}
+          </p>
+        )
+      })}
       {pendientes.length === 0 ? <p className="empty">No hay transferencias pendientes.</p> : null}
     </>
   )
@@ -164,9 +194,9 @@ function DetailList({ resumen, view, pendientes, onBack, closing = false }: { re
   const [title, subtitle, amount] = titles[view]
 
   return (
-    <Card className={`ps-detail-list ps-detail-${view}${closing ? " is-closing" : ""}`}>
+    <Card className={`ps-detail-list ps-detail-${view}${closing ? " is-closing" : ""}${view === "transferencias" && resumen.saldo < 0 ? " negative" : ""}`}>
       {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ChevronLeftIcon />Volver</Button> : null}
-      <header><strong>{title}</strong><small>{subtitle}</small><b>{formatoARS.format(amount)}</b></header>
+      <header><strong>{title}</strong><small>{subtitle}</small><b>{formatoARS.format(amount)}</b>{view === "transferencias" && resumen.saldo < 0 ? <span className="ps-transfer-hint">Toca una persona para copiar el monto</span> : null}</header>
       <Separator />
       <ScrollArea className="ps-detail-scroll">
         <div>

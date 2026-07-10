@@ -36,7 +36,7 @@
 .ps-mobile-scroll {
   flex: 1;
   min-height: 0;
-  padding: 1rem;
+  padding: 1rem 1rem 5.5rem;
 }
 
 .ps-mobile-scroll .scroll-area-viewport {
@@ -139,6 +139,7 @@
 
 .ps-stat-row {
   display: grid;
+  min-width: 0;
   grid-template-columns: minmax(0, 1fr) auto 1rem;
   align-items: baseline;
   gap: 0.75rem;
@@ -164,6 +165,14 @@
   height: 1rem;
   align-self: center;
   color: #98a2b3;
+}
+
+.ps-stat-row strong.positive {
+  color: var(--primary);
+}
+
+.ps-stat-row strong.negative {
+  color: #d92d20;
 }
 
 .ps-stat-row:not(button) {
@@ -270,6 +279,11 @@
   --detail-bg: #dcfce7;
 }
 
+.ps-detail-transferencias.negative {
+  --detail-color: #d92d20;
+  --detail-bg: #fee2e2;
+}
+
 .ps-mobile-page .ps-detail-button {
   grid-template-columns: 2.75rem minmax(0, 1fr) 1rem;
 }
@@ -292,11 +306,23 @@
 .ps-detail-list header,
 .ps-detail-list p {
   display: grid;
+  min-width: 0;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 1rem;
   margin: 0;
   padding: 0.9rem 1rem;
+}
+
+.ps-detail-list header {
+  overflow: hidden;
+}
+
+.ps-detail-list header strong,
+.ps-detail-list header small,
+.ps-detail-list header b,
+.ps-detail-list header .ps-transfer-hint {
+  min-width: 0;
 }
 
 .ps-detail-list > .btn {
@@ -312,7 +338,31 @@
 }
 
 .ps-part-row {
+  min-width: 0;
   grid-template-columns: 2.75rem minmax(0, 1fr) auto !important;
+}
+
+.ps-part-row span,
+.ps-part-row strong,
+.ps-part-row b {
+  min-width: 0;
+}
+
+.ps-part-row.ps-part-button {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto !important;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ps-part-row.ps-part-button:hover {
+  background: rgb(15 23 42 / 0.04);
 }
 
 .ps-row-icon {
@@ -323,6 +373,25 @@
   border-radius: 999px;
   background: #dcfce7;
   color: #008f45;
+}
+
+.ps-row-icon.ps-transfer-credit {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.ps-row-icon.ps-transfer-debt {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.ps-transfer-hint {
+  display: block;
+  grid-column: 1 / -1;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding-top: 0.35rem;
 }
 
 .ps-part-row b {
@@ -406,9 +475,11 @@
 }
 
 .ps-mobile-page .ps-detail-scroll .scroll-area-viewport {
+  width: 100%;
   height: 100%;
   max-height: none;
   overflow-y: scroll;
+  overflow-x: hidden;
   scrollbar-width: auto;
 }
 
