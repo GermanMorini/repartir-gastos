@@ -1,8 +1,8 @@
 import { ShareIcon, UsersIcon } from "lucide-react"
 import type { RefObject } from "react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { PaginationControls } from "../../components/shared/PaginationControls"
-import { Button, Card } from "../../components/ui"
+import { Badge, Button, Card } from "../../components/ui"
 import type { FilaCalculo, Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "../../types"
 import { useIsMobile } from "../../lib/viewport"
 import { RepartirDialog } from "../total/RepartirDialog"
@@ -32,6 +32,7 @@ type ResumenSectionProps = {
   pendientes?: TransferenciaPendiente[]
   resumenCopiable?: string
   onShareReparto?: () => void
+  suppressListAnimation?: boolean
 }
 
 export function ResumenSection({
@@ -51,18 +52,28 @@ export function ResumenSection({
   pendientes = [],
   resumenCopiable = "",
   onShareReparto = () => undefined,
+  suppressListAnimation = false,
 }: ResumenSectionProps) {
   const isMobile = useIsMobile()
   const [page, setPage] = useState(1)
   const [pageDirection, setPageDirection] = useState<"next" | "prev">("next")
+  const [pageAnimating, setPageAnimating] = useState(false)
+  const pageAnimationTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
   const pageSize = isMobile ? 4 : saldos.length || 1
   const totalPages = Math.max(1, Math.ceil(saldos.length / pageSize))
   const currentPage = Math.min(page, totalPages)
   const visibleSaldos = saldos.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const goToPage = (nextPage: number) => {
     setPageDirection(nextPage > currentPage ? "next" : "prev")
+    setPageAnimating(true)
+    if (pageAnimationTimerRef.current) window.clearTimeout(pageAnimationTimerRef.current)
+    pageAnimationTimerRef.current = window.setTimeout(() => setPageAnimating(false), 190)
     setPage(nextPage)
   }
+
+  useEffect(() => () => {
+    if (pageAnimationTimerRef.current) window.clearTimeout(pageAnimationTimerRef.current)
+  }, [])
 
   return (
     <Card className={`summary-card ${className}`} id="resumen" data-tour="resumen">
@@ -83,8 +94,8 @@ export function ResumenSection({
           ) : null}
         </div>
       </div>
-      <div className={`summary-list page-slide-${pageDirection}`} key={currentPage}>
-        {saldos.length === 0 ? <p className="empty">Agregá personas para ver saldos.</p> : null}
+      <div className={`summary-list ${pageAnimating && !suppressListAnimation ? `page-slide-${pageDirection}` : ""}`} key={currentPage}>
+        {saldos.length === 0 ? <Badge className="empty-state-badge">Sin saldos</Badge> : null}
         {visibleSaldos.map((saldo) => (
           <PersonaResumenItem key={saldo.persona} onClick={() => onResumenOpenPersonaChange(saldo.persona)} persona={saldo.persona} saldo={saldo.saldo} />
         ))}

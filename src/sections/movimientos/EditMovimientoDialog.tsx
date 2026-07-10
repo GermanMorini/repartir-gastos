@@ -71,7 +71,7 @@ export function EditMovimientoDialog({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button className="select-like" type="button">
-                      {edicion.movimiento.participantes.length === 0 ? "Participantes" : edicion.movimiento.participantes.length === personas.length ? "Todos los seleccionados" : `${edicion.movimiento.participantes.length} seleccionados`}
+                      {edicion.movimiento.participantes.length === 0 ? "Participantes" : edicion.movimiento.participantes.length === personas.length ? "Todos" : `${edicion.movimiento.participantes.length} seleccionados`}
                       <ChevronDownIcon data-icon="inline-end" />
                     </Button>
                   </DropdownMenuTrigger>

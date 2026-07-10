@@ -1,16 +1,13 @@
-import type { AppState, Persona } from "../types"
-import { isMobileViewport } from "../lib/viewport"
+import type { AppState } from "../types"
 
 export type MobileSection = "personas" | "movimientos" | "resumen"
+export type TutorialDemo = "personas" | "movimientos" | "resumen"
 
 export type TutorialStepConfig = {
   section: MobileSection
-  selector: string | (() => string)
+  selector: string
   fallback?: string
-  opensResumen?: Persona
-  opensCalculos?: boolean
-  opensGrafico?: boolean
-  opensSettlement?: boolean
+  demo?: TutorialDemo
   title: string
   description: string
 }
@@ -29,17 +26,47 @@ const tutorialMockState = {
 } satisfies AppState
 
 export const tutorialStepsConfig: TutorialStepConfig[] = [
-  { section: "personas", selector: "[data-tour='personas']", title: "Añadí personas", description: "Añadí las personas entre quienes se tienen que repartir los gastos" },
-  { section: "movimientos", selector: "[data-tour='movimientos']", title: "Añadí todos los gastos y transferencias", description: "Escribí el nombre del gasto, el monto, quién pagó y entre quiénes se reparte. Podés añadir una categoría si querés" },
-  { section: "movimientos", selector: () => (isMobileViewport() ? "[data-tour='copy-movimientos-mobile']" : "[data-tour='copy-movimientos-desktop']"), fallback: "[data-tour='movimientos']", title: "¿Falta algo?", description: "Compartí esto con tus contactos para ver qué es lo que falta." },
-  { section: "resumen", selector: "[data-tour='resumen']", title: "Revisá los cálculos", description: "Tocá una persona para ver lo que tiene que gastar y lo que pagó." },
-  { section: "resumen", selector: "[data-tour='resumen-norberto-dialog']", fallback: "[data-tour='resumen']", opensResumen: "Norberto", title: "Resumen de Norberto", description: "Acá ves cuánto le tocaba gastar, cuánto pagó y su resultado final. Podés compartirlo con él para que sepa cuánto debe." },
-  { section: "resumen", selector: "[data-tour='calculos']", fallback: "[data-tour='resumen']", title: "¿No podés creer lo que debés?", description: "Revisá los cálculos paso a paso para estar seguro" },
-  { section: "resumen", selector: "[data-tour='calculos-dialog']", fallback: "[data-tour='resumen']", opensCalculos: true, title: "Matriz de cálculos", description: "Acá ves cómo cada movimiento cambia el saldo de cada persona." },
-  { section: "resumen", selector: "[data-tour='total']", fallback: "[data-tour='resumen']", title: "Todo listo!", description: "Tocá 'Repartir!' para saber quién le transfiere a quién" },
-  { section: "resumen", selector: "[data-tour='grafico']", fallback: "[data-tour='resumen']", title: "¿No sabés en qué se gastó tanto?", description: "Podés comparar categorías para saber en qué se fue la plata" },
-  { section: "resumen", selector: "[data-tour='grafico-dialog']", fallback: "[data-tour='resumen']", opensGrafico: true, title: "Gráfico por categoría", description: "El gráfico muestra en qué categorías se concentró el gasto." },
-  { section: "resumen", selector: "[data-tour='repartir-dialog']", fallback: "[data-tour='resumen']", opensSettlement: true, title: "Pasale esto a tus contactos", description: "Compartile esto a los demás para que sepan cuánto deben" },
+  {
+    section: "personas",
+    selector: "[data-tour='bottom-nav']",
+    title: "Repartí gastos en 3 simples pasos",
+    description: "Cargá personas, agregá gastos y transferencias, y revisá el resumen para ver qué pagos hay que hacer.",
+  },
+  {
+    section: "personas",
+    selector: "[data-tour='personas']",
+    demo: "personas",
+    title: "Añadí personas",
+    description: "Cargá las personas entre quienes se tienen que repartir los gastos.",
+  },
+  {
+    section: "movimientos",
+    selector: "[data-tour='movimientos']",
+    demo: "movimientos",
+    title: "Añadí gastos y transferencias",
+    description: "Cargá el gasto, el monto, quién lo pagó y qué personas participaron. Si alguien ya le transfirió dinero a otra persona para cubrir parte de los gastos, registralo también para que el cálculo final lo tenga en cuenta.",
+  },
+  {
+    section: "resumen",
+    selector: "[data-tour='resumen']",
+    demo: "resumen",
+    title: "Todo listo!",
+    description: "Presioná \"Repartir!\" para saber qué transferencias hay que hacer. También podés tocar una persona para ver su detalle.",
+  },
+  {
+    section: "resumen",
+    selector: "[data-tour='repartir-dialog']",
+    fallback: "[data-tour='resumen']",
+    title: "Estas son las transferencias que hay que hacer",
+    description: "Presiona \"Compartir\" para pasarselo a los demás.",
+  },
+  {
+    section: "resumen",
+    selector: "[data-tour='actions-menu']",
+    fallback: "[data-tour='resumen']",
+    title: "Menú de acciones",
+    description: "Desde acá podés graficar gastos por categoría, revisar cálculos paso a paso o limpiar todos los datos.",
+  },
 ]
 
 export function nextPaint() {
@@ -72,6 +99,5 @@ export function cloneTutorialState(): AppState {
 }
 
 export function getTutorialElement(step: TutorialStepConfig) {
-  const selector = typeof step.selector === "function" ? step.selector() : step.selector
-  return document.querySelector(selector) ?? (step.fallback ? document.querySelector(step.fallback) : null) ?? document.body
+  return document.querySelector(step.selector) ?? (step.fallback ? document.querySelector(step.fallback) : null) ?? document.body
 }

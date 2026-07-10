@@ -1,0 +1,19 @@
+.tutorial-demo-press {
+  animation: tutorial-demo-press 520ms ease-out;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #6d28d9 28%, transparent), 0 12px 30px color-mix(in srgb, #6d28d9 24%, transparent);
+  transform: translateY(1px) scale(0.98);
+}
+
+@keyframes tutorial-demo-press {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+
+  45% {
+    transform: translateY(1px) scale(0.96);
+  }
+
+  100% {
+    transform: translateY(1px) scale(0.98);
+  }
+}

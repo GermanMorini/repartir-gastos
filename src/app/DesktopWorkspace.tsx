@@ -65,10 +65,14 @@ function Pagination({ page, totalPages, onPage }: { page: number; totalPages: nu
 function MovementParticipants({ participantes }: { participantes: Persona[] }) {
   const visibles = participantes.slice(0, 2)
   const restantes = participantes.length - visibles.length
+  const participantesTexto = participantes.join(", ")
   return (
-    <span className="desktop-participant-dots">
-      {visibles.map((persona) => <span className="avatar" key={persona}>{persona[0]?.toUpperCase()}</span>)}
-      {restantes > 0 ? <small>+{restantes}</small> : null}
+    <span className="desktop-participants-tooltip" aria-label={`Participantes: ${participantesTexto}`}>
+      <span className="desktop-participant-dots">
+        {visibles.map((persona) => <span className="avatar" key={persona}>{persona[0]?.toUpperCase()}</span>)}
+        {restantes > 0 ? <small>+{restantes}</small> : null}
+      </span>
+      <span className="desktop-participants-tooltip-content" role="tooltip">{participantesTexto}</span>
     </span>
   )
 }
@@ -243,7 +247,7 @@ export function DesktopWorkspace({
             <ScrollArea className="desktop-scroll-list">
               <div className="desktop-person-list">
                 {personas.map((persona) => <PersonaItem key={persona} persona={persona} onDelete={onDeletePersona} />)}
-                {personas.length === 0 ? <p className="empty">Agregá personas para empezar.</p> : null}
+                {personas.length === 0 ? <Badge className="empty-state-badge">Sin personas</Badge> : null}
               </div>
             </ScrollArea>
           </section>
@@ -271,7 +275,7 @@ export function DesktopWorkspace({
                   {pagedMovements.map(({ movimiento, index }) => <DesktopMovementRow key={`${movimiento.tipo}-${index}`} movimiento={movimiento} index={index} onEdit={onEditMovimiento} nombreMovimiento={nombreMovimiento} />)}
                 </TableBody>
               </Table>
-              {pagedMovements.length === 0 ? <p className="empty">No hay movimientos para mostrar.</p> : null}
+              {pagedMovements.length === 0 ? <Badge className="empty-state-badge">{movimientos.length === 0 ? "Sin movimientos" : "Sin resultados"}</Badge> : null}
             </ScrollArea>
             <div className="desktop-filter-bar">
               <Button aria-label="Limpiar filtros" className="desktop-clear-filters" onClick={() => { setMovementSearch(""); setMovementType("todos"); setMovementCategory("todas"); setMovementPayer("todos"); setMovementPage(1) }} type="button"><EraserIcon /></Button>
@@ -289,6 +293,7 @@ export function DesktopWorkspace({
             <div className="desktop-content-head"><div><h2>Saldos por persona</h2><p>{filteredSaldos.length} personas</p></div></div>
             <ScrollArea className="desktop-scroll-list">
               <div className="desktop-summary-card-grid">
+                {filteredSaldos.length === 0 ? <Badge className="empty-state-badge">Sin saldos</Badge> : null}
                 {pagedSaldos.map((saldo) => {
                   const estado = estadoSaldo(saldo.saldo)
                   return (

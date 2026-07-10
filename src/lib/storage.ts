@@ -1,6 +1,6 @@
 import type { AppState } from "../types"
 
-const KEY = "repartir-cuentas:v1"
+const KEY = "repartir-gastos:v1"
 const initialState: AppState = { personas: [], movimientos: [] }
 
 export function loadState(): AppState {

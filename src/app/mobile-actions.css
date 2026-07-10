@@ -50,6 +50,28 @@
     min-height: 0;
   }
 
+  .mobile-actions-drawer .category-chart-card {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .mobile-actions-drawer .calculations-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+  }
+
+  .mobile-actions-drawer .calculations-head .dialog-title {
+    margin: 0;
+  }
+
+  .mobile-actions-drawer .calculations-head .dialog-description {
+    margin: 0;
+  }
+
   .mobile-actions-drawer .calculations-scroll,
   .mobile-actions-drawer .calculations-scroll .scroll-area-viewport {
     max-height: calc(100dvh - 16rem);

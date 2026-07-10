@@ -4,6 +4,7 @@ import type { DriveStep, Driver } from "driver.js"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast, Toaster } from "sonner"
 import "driver.js/dist/driver.css"
+import "./tutorial-demo.css"
 import { DesktopWorkspace } from "./DesktopWorkspace"
 import { Header } from "./Header"
 import { MobileLayout } from "./MobileLayout"
@@ -27,7 +28,7 @@ import { nombreMovimiento, textoCategorias, textoMovimientos, textoResumenPerson
 import { isMobileViewport, useIsMobile } from "../lib/viewport"
 import { cloneTutorialState, getTutorialElement, hideTutorialForever, nextPaint, tutorialHidden, tutorialStepsConfig } from "./tutorial"
 import type { MobileSection } from "./tutorial"
-import { Badge, Button, Card, Checkbox, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
+import { Badge, Button, Checkbox, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
 import { clearState, loadState, saveState } from "../lib/storage"
 import type { AppState, CategoriaGasto, Movimiento, Persona } from "../types"
 
@@ -57,12 +58,16 @@ function EditableApp() {
   const [transferencia, setTransferencia] = useState({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
   const [activeSection, setActiveSection] = useState<MobileSection>("personas")
+  const [movementTab, setMovementTab] = useState<"gasto" | "transferencia">("gasto")
   const [mobileMovementPage, setMobileMovementPage] = useState(1)
   const [mobileMovementPageDirection, setMobileMovementPageDirection] = useState<"next" | "prev">("next")
+  const [mobileMovementPageAnimating, setMobileMovementPageAnimating] = useState(false)
   const [sectionDirection, setSectionDirection] = useState<"forward" | "back">("forward")
+  const [sectionAnimating, setSectionAnimating] = useState(false)
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
   const [mobileActionsView, setMobileActionsView] = useState<"menu" | "grafico" | "calculos">("menu")
   const [mobileActionsDirection, setMobileActionsDirection] = useState<"forward" | "back">("forward")
+  const [mobileActionsPanelAnimating, setMobileActionsPanelAnimating] = useState(false)
   const [tutorialDialogOpen, setTutorialDialogOpen] = useState(() => !tutorialHidden())
   const [hideTutorial, setHideTutorial] = useState(false)
   const [settlementOpen, setSettlementOpen] = useState(false)
@@ -70,16 +75,22 @@ function EditableApp() {
   const [resumenClosing, setResumenClosing] = useState(false)
   const [calculosOpen, setCalculosOpen] = useState(false)
   const [graficoOpen, setGraficoOpen] = useState(false)
+  const [demoActiveTarget, setDemoActiveTarget] = useState<string | null>(null)
   const exportCategoriasRef = useRef<HTMLDivElement | null>(null)
   const calculosRef = useRef<HTMLDivElement | null>(null)
   const tutorialDriverRef = useRef<Driver | null>(null)
   const tutorialPreviousStateRef = useRef<AppState | null>(null)
+  const tutorialCompletedDemosRef = useRef<Set<string>>(new Set())
   const resumenCloseTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+  const sectionAnimationTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+  const mobileMovementPageTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
 
   useEffect(() => saveState({ personas, movimientos }), [personas, movimientos])
   useEffect(() => () => {
     tutorialDriverRef.current?.destroy()
     if (resumenCloseTimerRef.current) window.clearTimeout(resumenCloseTimerRef.current)
+    if (sectionAnimationTimerRef.current) window.clearTimeout(sectionAnimationTimerRef.current)
+    if (mobileMovementPageTimerRef.current) window.clearTimeout(mobileMovementPageTimerRef.current)
   }, [])
 
   const movimientosCard = useMemo(
@@ -127,7 +138,12 @@ function EditableApp() {
   function irASeccion(seccion: MobileSection) {
     const currentIndex = mobileSectionOrder.indexOf(activeSection)
     const nextIndex = mobileSectionOrder.indexOf(seccion)
-    if (nextIndex !== currentIndex) setSectionDirection(nextIndex > currentIndex ? "forward" : "back")
+    if (nextIndex !== currentIndex) {
+      setSectionDirection(nextIndex > currentIndex ? "forward" : "back")
+      setSectionAnimating(true)
+      if (sectionAnimationTimerRef.current) window.clearTimeout(sectionAnimationTimerRef.current)
+      sectionAnimationTimerRef.current = window.setTimeout(() => setSectionAnimating(false), 230)
+    }
     setActiveSection(seccion)
     if (matchMedia("(max-width: 719px)").matches) window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -136,14 +152,19 @@ function EditableApp() {
   const mostrarSeccion = (seccion: MobileSection) => !isMobile || activeSection === seccion
   const cambiarPaginaMovimientos = (nextPage: number) => {
     setMobileMovementPageDirection(nextPage > currentMobileMovementPage ? "next" : "prev")
+    setMobileMovementPageAnimating(true)
+    if (mobileMovementPageTimerRef.current) window.clearTimeout(mobileMovementPageTimerRef.current)
+    mobileMovementPageTimerRef.current = window.setTimeout(() => setMobileMovementPageAnimating(false), 190)
     setMobileMovementPage(nextPage)
   }
   const abrirAccionMobile = (view: "grafico" | "calculos") => {
     setMobileActionsDirection("forward")
+    setMobileActionsPanelAnimating(true)
     setMobileActionsView(view)
   }
   const volverAccionesMobile = () => {
     setMobileActionsDirection("back")
+    setMobileActionsPanelAnimating(true)
     setMobileActionsView("menu")
   }
 
@@ -161,6 +182,104 @@ function EditableApp() {
     setTutorialDialogOpen(false)
   }
 
+  const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+
+  async function typeInto(update: (value: string) => void, text: string, delay = 45) {
+    update("")
+    for (let index = 1; index <= text.length; index += 1) {
+      update(text.slice(0, index))
+      await sleep(delay)
+    }
+  }
+
+  async function flashDemoTarget(id: string) {
+    setDemoActiveTarget(id)
+    await sleep(420)
+    setDemoActiveTarget(null)
+    await sleep(180)
+  }
+
+  async function runPersonasDemo() {
+    if (tutorialCompletedDemosRef.current.has("personas")) return
+    tutorialCompletedDemosRef.current.add("personas")
+    const state = cloneTutorialState()
+    setPersonas([])
+    setMovimientos([])
+    setNombre("")
+    await nextPaint()
+
+    for (const persona of state.personas) {
+      await typeInto(setNombre, persona)
+      await flashDemoTarget("add-person-button")
+      setPersonas((actuales) => (actuales.includes(persona) ? actuales : [...actuales, persona]))
+      setNombre("")
+      await sleep(300)
+    }
+  }
+
+  async function runMovimientosDemo() {
+    if (tutorialCompletedDemosRef.current.has("movimientos")) return
+    tutorialCompletedDemosRef.current.add("movimientos")
+    const state = cloneTutorialState()
+    setPersonas(state.personas)
+    setMovimientos([])
+    setMobileMovementPage(1)
+    await nextPaint()
+
+    for (const movimiento of state.movimientos) {
+      if (movimiento.tipo === "gasto") {
+        setMovementTab("gasto")
+        setGasto({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [], categoria: CATEGORIA_DEFAULT })
+        await nextPaint()
+        await typeInto((value) => setGasto((actual) => ({ ...actual, descripcion: value })), movimiento.descripcion ?? "", 60)
+        setGasto((actual) => ({ ...actual, monto: String(movimiento.monto) }))
+        await sleep(450)
+        setGasto((actual) => ({ ...actual, pagador: movimiento.pagador }))
+        await sleep(450)
+        setGasto((actual) => ({ ...actual, participantes: [...movimiento.participantes], categoria: movimiento.categoria }))
+        await sleep(520)
+        await flashDemoTarget("add-expense-button")
+        setMovimientos((actuales) => [...actuales, { ...movimiento, participantes: [...movimiento.participantes] }])
+        setGasto({ descripcion: "", pagador: movimiento.pagador, monto: "", participantes: state.personas, categoria: movimiento.categoria })
+        await sleep(420)
+        continue
+      }
+
+      setMovementTab("transferencia")
+      setTransferencia({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
+      await nextPaint()
+      await typeInto((value) => setTransferencia((actual) => ({ ...actual, descripcion: value })), movimiento.descripcion ?? "", 60)
+      setTransferencia((actual) => ({ ...actual, monto: String(movimiento.monto) }))
+      await sleep(450)
+      setTransferencia((actual) => ({ ...actual, de: movimiento.de }))
+      await sleep(450)
+      setTransferencia((actual) => ({ ...actual, a: movimiento.a }))
+      await sleep(520)
+      await flashDemoTarget("add-transfer-button")
+      setMovimientos((actuales) => [...actuales, { ...movimiento }])
+      setTransferencia({ descripcion: "", de: movimiento.de, a: movimiento.a, monto: "" })
+      await sleep(420)
+    }
+  }
+
+  async function runResumenDemo() {
+    if (tutorialCompletedDemosRef.current.has("resumen")) return
+    tutorialCompletedDemosRef.current.add("resumen")
+    const state = cloneTutorialState()
+    setPersonas(state.personas)
+    setMovimientos(state.movimientos)
+    await nextPaint()
+    setSettlementOpen(true)
+    await sleep(900)
+  }
+
+  async function runTutorialDemo(index: number) {
+    const demo = tutorialStepsConfig[index]?.demo
+    if (demo === "personas") await runPersonasDemo()
+    if (demo === "movimientos") await runMovimientosDemo()
+    if (demo === "resumen") await runResumenDemo()
+  }
+
   async function prepararPasoTutorial(index: number) {
     const step = tutorialStepsConfig[index]
     if (!step) return
@@ -168,10 +287,10 @@ function EditableApp() {
       setActiveSection(step.section)
       window.scrollTo({ top: 0, behavior: "auto" })
     }
-    setResumenOpenPersona(step.opensResumen ?? null)
-    setCalculosOpen(Boolean(step.opensCalculos))
-    setGraficoOpen(Boolean(step.opensGrafico))
-    setSettlementOpen(Boolean(step.opensSettlement))
+    setResumenOpenPersona(null)
+    setCalculosOpen(false)
+    setGraficoOpen(false)
+    setSettlementOpen(step.selector === "[data-tour='repartir-dialog']")
     await nextPaint()
   }
 
@@ -211,13 +330,26 @@ function EditableApp() {
       popoverClass: "app-driver-popover",
       stagePadding: 8,
       stageRadius: 10,
+      disableActiveInteraction: true,
+      overlayClickBehavior: () => undefined,
       onNextClick: (_element, _step, { driver: driverObj }) => {
-        const nextIndex = (driverObj.getActiveIndex() ?? 0) + 1
+        const currentIndex = driverObj.getActiveIndex() ?? 0
+        const nextIndex = currentIndex + 1
         if (nextIndex >= steps.length) {
           driverObj.destroy()
           return
         }
-        void moveTo(nextIndex)
+        void (async () => {
+          if (moving) return
+          moving = true
+          try {
+            await runTutorialDemo(currentIndex)
+            await prepararPasoTutorial(nextIndex)
+            driverObj.moveTo(nextIndex)
+          } finally {
+            moving = false
+          }
+        })()
       },
       onPrevClick: (_element, _step, { driver: driverObj }) => {
         const prevIndex = (driverObj.getActiveIndex() ?? 0) - 1
@@ -238,6 +370,8 @@ function EditableApp() {
         setResumenOpenPersona(null)
         setCalculosOpen(false)
         setGraficoOpen(false)
+        setDemoActiveTarget(null)
+        tutorialCompletedDemosRef.current = new Set()
         tutorialDriverRef.current = null
       },
     })
@@ -250,12 +384,14 @@ function EditableApp() {
     tutorialPreviousStateRef.current = { personas: [...personas], movimientos: movimientos.map((movimiento) => (
       movimiento.tipo === "gasto" ? { ...movimiento, participantes: [...movimiento.participantes] } : { ...movimiento }
     )) }
-    const state = cloneTutorialState()
-    saveState(state)
-    setPersonas(state.personas)
-    setMovimientos(state.movimientos)
+    const emptyState: AppState = { personas: [], movimientos: [] }
+    saveState(emptyState)
+    setPersonas([])
+    setMovimientos([])
     setGasto({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [], categoria: CATEGORIA_DEFAULT })
     setTransferencia({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
+    setMovementTab("gasto")
+    tutorialCompletedDemosRef.current = new Set()
     setActiveSection("personas")
     setSettlementOpen(false)
     setResumenOpenPersona(null)
@@ -486,7 +622,7 @@ function EditableApp() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button className="select-like" type="button">
-              {gasto.participantes.length === 0 ? "Seleccionar participantes" : gasto.participantes.length === personas.length ? "Todos los seleccionados" : `${gasto.participantes.length} seleccionados`}
+              {gasto.participantes.length === 0 ? "Seleccionar participantes" : gasto.participantes.length === personas.length ? "Todos" : `${gasto.participantes.length} seleccionados`}
               <ChevronDownIcon data-icon="inline-end" />
             </Button>
           </DropdownMenuTrigger>
@@ -557,11 +693,11 @@ function EditableApp() {
       </div>
       {isMobile ? (
         <>
-          <Header onActionsClick={() => { setMobileActionsView("menu"); setMobileActionsDirection("forward"); setMobileActionsOpen(true) }} />
+          <Header onActionsClick={() => { setMobileActionsPanelAnimating(false); setMobileActionsView("menu"); setMobileActionsDirection("forward"); setMobileActionsOpen(true) }} />
           <Dialog open={mobileActionsOpen} onOpenChange={(open) => { setMobileActionsOpen(open); if (!open) setMobileActionsView("menu") }}>
             <DialogContent className="mobile-actions-drawer">
               {mobileActionsView === "menu" ? (
-                <div className={`mobile-actions-panel panel-${mobileActionsDirection}`} key="menu">
+                <div className={`mobile-actions-panel ${mobileActionsPanelAnimating ? `panel-${mobileActionsDirection}` : ""}`} key="menu">
                   <div className="mobile-actions-head">
                     <button className="mobile-actions-back" onClick={() => setMobileActionsOpen(false)} type="button"><ArrowLeftIcon />Cerrar</button>
                     <DialogTitle>Acciones</DialogTitle>
@@ -586,20 +722,20 @@ function EditableApp() {
                 </div>
               ) : null}
               {mobileActionsView === "grafico" ? (
-                <div className={`mobile-actions-panel panel-${mobileActionsDirection}`} key="grafico">
+                <div className={`mobile-actions-panel ${mobileActionsPanelAnimating ? `panel-${mobileActionsDirection}` : ""}`} key="grafico">
                   <div className="mobile-actions-head">
                     <button className="mobile-actions-back" onClick={volverAccionesMobile} type="button"><ArrowLeftIcon />Volver</button>
                     <DialogTitle>Gráfico</DialogTitle>
                     <DialogDescription>Compará gastos por categoría.</DialogDescription>
                   </div>
-                  <Card className="category-chart-card">
+                  <div className="category-chart-card">
                     <div className="category-chart-layout">
                       <CategoryPie data={gastosPorCategoria} />
                       <CategoryDetailList data={gastosPorCategoria} />
                     </div>
                     <Separator />
                     <div className="category-total"><span>Total gastado</span><strong>{formatoARS.format(totalGastado)}</strong></div>
-                  </Card>
+                  </div>
                   <div className="dialog-actions">
                     <Button className="btn-outline" onClick={() => navigator.clipboard.writeText(textoCategorias(totalGastado, gastosPorCategoria, porcentaje)).then(() => toast.success("Resumen copiado."))} type="button">
                       <CopyIcon data-icon="inline-start" />
@@ -613,19 +749,15 @@ function EditableApp() {
                 </div>
               ) : null}
               {mobileActionsView === "calculos" ? (
-                <div className={`mobile-actions-panel panel-${mobileActionsDirection}`} key="calculos">
+                <div className={`mobile-actions-panel ${mobileActionsPanelAnimating ? `panel-${mobileActionsDirection}` : ""}`} key="calculos">
                   <div className="mobile-actions-head">
                     <button className="mobile-actions-back" onClick={volverAccionesMobile} type="button"><ArrowLeftIcon />Volver</button>
-                    <DialogTitle>Cálculos</DialogTitle>
-                    <DialogDescription>Revisá los cálculos paso a paso.</DialogDescription>
                   </div>
                   <div className="calculations-content" ref={calculosRef}>
                     <div className="calculations-head">
-                      <div>
-                        <h2>Cálculos hechos</h2>
-                        <p>Cuentas hechas paso a paso. Se subraya quién pagó o transfirió cada movimiento.</p>
-                      </div>
-                      <Badge>{movimientos.length} movimientos</Badge>
+                      <DialogTitle className="dialog-title">Cálculos</DialogTitle>
+                      <DialogDescription className="dialog-description">Cuentas hechas paso a paso. Se subraya quién pagó o transfirió cada movimiento.</DialogDescription>
+                      <Badge>{personas.length} personas</Badge>
                     </div>
                     <Separator />
                     <ScrollArea className="calculations-scroll">
@@ -671,12 +803,14 @@ function EditableApp() {
           {mostrarSeccion("personas") ? (
             <PersonasSection
               className={vistaMobile("personas")}
+              demoActiveTarget={demoActiveTarget}
               personas={personas}
               nombre={nombre}
               onNombreChange={setNombre}
               onAdd={agregarPersona}
               onDelete={borrarPersona}
               onStartTutorial={() => void iniciarTutorialConMockup()}
+              suppressListAnimation={sectionAnimating}
             />
           ) : null}
 
@@ -697,7 +831,7 @@ function EditableApp() {
                 </Button>
               </div>
             </div>
-            <Tabs defaultValue="gasto">
+            <Tabs value={movementTab} onValueChange={(value) => setMovementTab(value as "gasto" | "transferencia")}>
               <TabsList className="tabs-list">
                 <TabsTrigger className="tabs-trigger" value="gasto">Gasto</TabsTrigger>
                 <TabsTrigger className="tabs-trigger" value="transferencia">Transferencia</TabsTrigger>
@@ -727,7 +861,7 @@ function EditableApp() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button className="select-like" type="button">
-                          {gasto.participantes.length === 0 ? "Participantes" : gasto.participantes.length === personas.length ? "Todos los seleccionados" : `${gasto.participantes.length} seleccionados`}
+                          {gasto.participantes.length === 0 ? "Participantes" : gasto.participantes.length === personas.length ? "Todos" : `${gasto.participantes.length} seleccionados`}
                           <ChevronDownIcon data-icon="inline-end" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -774,7 +908,7 @@ function EditableApp() {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <Button className="add-movement" onClick={agregarGasto} type="button">
+                  <Button className={`add-movement ${demoActiveTarget === "add-expense-button" ? "tutorial-demo-press" : ""}`} data-tour="add-expense-button" onClick={agregarGasto} type="button">
                     <PlusIcon data-icon="inline-start" />
                     Añadir gasto
                   </Button>
@@ -814,7 +948,7 @@ function EditableApp() {
                     </Select>
                   </label>
                 </div>
-                <Button className="add-movement" onClick={agregarTransferencia} type="button">
+                <Button className={`add-movement ${demoActiveTarget === "add-transfer-button" ? "tutorial-demo-press" : ""}`} data-tour="add-transfer-button" onClick={agregarTransferencia} type="button">
                   <PlusIcon data-icon="inline-start" />
                   Registrar transferencia
                 </Button>
@@ -830,8 +964,8 @@ function EditableApp() {
               <span className="hint-mobile">Tocá en un movimiento para editarlo.</span>
               <span className="hint-desktop">Clickeá en un movimiento para editarlo.</span>
             </p>
-            <div className={`movement-list page-slide-${mobileMovementPageDirection}`} key={currentMobileMovementPage}>
-              {movimientos.length === 0 ? <p className="empty">Todavía no hay movimientos.</p> : null}
+            <div className={`movement-list ${mobileMovementPageAnimating && !sectionAnimating ? `page-slide-${mobileMovementPageDirection}` : ""}`} key={currentMobileMovementPage}>
+              {movimientos.length === 0 ? <Badge className="empty-state-badge">Sin movimientos</Badge> : null}
               {movimientos.length > 0 ? mobileMovimientos.map(({ movimiento, index }) => (
                 <MovimientoItem
                   key={`${movimiento.tipo}-${index}`}
@@ -901,7 +1035,7 @@ function EditableApp() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button className="select-like" type="button">
-                              {edicion.movimiento.participantes.length === 0 ? "Participantes" : edicion.movimiento.participantes.length === personas.length ? "Todos los seleccionados" : `${edicion.movimiento.participantes.length} seleccionados`}
+                              {edicion.movimiento.participantes.length === 0 ? "Participantes" : edicion.movimiento.participantes.length === personas.length ? "Todos" : `${edicion.movimiento.participantes.length} seleccionados`}
                               <ChevronDownIcon data-icon="inline-end" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -995,6 +1129,7 @@ function EditableApp() {
               resumenCopiable={resumenCopiable}
               saldos={saldos}
               settlementOpen={settlementOpen}
+              suppressListAnimation={sectionAnimating}
               totalGastado={totalGastado}
             />
           ) : null}
