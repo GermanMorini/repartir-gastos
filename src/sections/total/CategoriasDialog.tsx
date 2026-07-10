@@ -1,4 +1,5 @@
 import { CopyIcon, PieChartIcon, ShareIcon } from "lucide-react"
+import type { ReactNode } from "react"
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Separator } from "../../components/ui"
 import { formatoARS } from "../../lib/money"
 import type { ResumenCategoria } from "../../types"
@@ -11,6 +12,7 @@ export function CategoriasDialog({
   total,
   onCopy,
   onExport,
+  trigger,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -18,15 +20,20 @@ export function CategoriasDialog({
   total: number
   onCopy: () => void
   onExport: () => void
+  trigger?: ReactNode
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button className="btn-chart" data-tour="grafico" type="button">
-          <PieChartIcon data-icon="inline-start" />
-          Gráfico
-        </Button>
-      </DialogTrigger>
+      {trigger !== null ? (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button className="btn-chart" data-tour="grafico" type="button">
+              <PieChartIcon data-icon="inline-start" />
+              Gráfico
+            </Button>
+          )}
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="category-dialog" data-tour="grafico-dialog">
         <DialogTitle>Gastos por categoría</DialogTitle>
         <DialogDescription>Compará cuánto se gastó en cada categoría.</DialogDescription>

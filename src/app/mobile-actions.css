@@ -1,0 +1,81 @@
+@media (max-width: 719px) {
+  .mobile-actions-drawer {
+    overflow: hidden;
+    animation: mobile-actions-drawer-in 220ms ease-out !important;
+  }
+
+  .mobile-actions-drawer > .dialog-close {
+    display: none;
+  }
+
+  .mobile-actions-drawer[data-state="closed"] {
+    animation: mobile-actions-drawer-out 180ms ease-in forwards !important;
+  }
+
+  .mobile-actions-panel {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .mobile-actions-panel.panel-forward {
+    animation: mobile-actions-panel-forward 220ms ease-out;
+  }
+
+  .mobile-actions-panel.panel-back {
+    animation: mobile-actions-panel-back 220ms ease-out;
+  }
+
+  .mobile-actions-drawer .mobile-actions-level {
+    animation: none !important;
+  }
+
+  .mobile-actions-drawer .category-chart-card,
+  .mobile-actions-drawer .calculations-content {
+    animation: none !important;
+  }
+
+  .mobile-actions-drawer .dialog-actions {
+    flex: 0 0 auto;
+  }
+
+  .mobile-actions-head {
+    flex: 0 0 auto;
+  }
+
+  .mobile-actions-drawer .category-chart-card,
+  .mobile-actions-drawer .calculations-content {
+    min-height: 0;
+  }
+
+  .mobile-actions-drawer .calculations-scroll,
+  .mobile-actions-drawer .calculations-scroll .scroll-area-viewport {
+    max-height: calc(100dvh - 16rem);
+  }
+}
+
+@keyframes mobile-actions-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes mobile-actions-drawer-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes mobile-actions-panel-forward {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes mobile-actions-panel-back {
+  from {
+    transform: translateX(-100%);
+  }
+}

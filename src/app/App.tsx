@@ -1,4 +1,4 @@
-import { ArrowLeftRightIcon, ChevronDownIcon, CopyIcon, PlusIcon, ReceiptTextIcon, ShareIcon } from "lucide-react"
+import { ArrowLeftIcon, ArrowLeftRightIcon, CalculatorIcon, ChevronDownIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, ShredderIcon } from "lucide-react"
 import { driver } from "driver.js"
 import type { DriveStep, Driver } from "driver.js"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -8,6 +8,7 @@ import { DesktopWorkspace } from "./DesktopWorkspace"
 import { Header } from "./Header"
 import { MobileLayout } from "./MobileLayout"
 import { BottomNavigation } from "../components/navigation/BottomNavigation"
+import { ConfirmDialog } from "../components/shared/ConfirmDialog"
 import { CategoriaIcon } from "../components/shared/CategoryBadge"
 import { PaginationControls } from "../components/shared/PaginationControls"
 import { PersonSummaryMobilePage } from "../features/person-summary/PersonSummary"
@@ -17,20 +18,21 @@ import { EditMovimientoDialog } from "../sections/movimientos/EditMovimientoDial
 import { PersonasSection } from "../sections/personas/PersonasSection"
 import { MovimientoItem } from "../sections/movimientos/MovimientoItem"
 import { ResumenSection } from "../sections/resumen/ResumenSection"
-import { CategoryChartShareCard } from "../sections/total/CategoryChart"
+import { CategoryChartShareCard, CategoryDetailList, CategoryPie } from "../sections/total/CategoryChart"
 import { calcularSaldos, calcularTransferenciasPendientes, getGastosPorCategoria, getMatrizCalculos, getResumenPersona } from "../lib/calculos"
 import { CATEGORIAS_GASTO, CATEGORIA_DEFAULT, getCategoriaOrden } from "../lib/categorias"
 import { descargarImagen, toPngDataUrl } from "../lib/export-image"
-import { formatoARS, porcentaje } from "../lib/money"
+import { formatoARS, formatoSaldoMatriz, porcentaje } from "../lib/money"
 import { nombreMovimiento, textoCategorias, textoMovimientos, textoResumenPersona } from "../lib/share-text"
 import { isMobileViewport, useIsMobile } from "../lib/viewport"
 import { cloneTutorialState, getTutorialElement, hideTutorialForever, nextPaint, tutorialHidden, tutorialStepsConfig } from "./tutorial"
 import type { MobileSection } from "./tutorial"
-import { Button, Checkbox, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
+import { Badge, Button, Card, Checkbox, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
 import { clearState, loadState, saveState } from "../lib/storage"
 import type { AppState, CategoriaGasto, Movimiento, Persona } from "../types"
 
 const sinSeleccion = ""
+const mobileSectionOrder: MobileSection[] = ["personas", "movimientos", "resumen"]
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
 type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
 
@@ -56,6 +58,11 @@ function EditableApp() {
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
   const [activeSection, setActiveSection] = useState<MobileSection>("personas")
   const [mobileMovementPage, setMobileMovementPage] = useState(1)
+  const [mobileMovementPageDirection, setMobileMovementPageDirection] = useState<"next" | "prev">("next")
+  const [sectionDirection, setSectionDirection] = useState<"forward" | "back">("forward")
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
+  const [mobileActionsView, setMobileActionsView] = useState<"menu" | "grafico" | "calculos">("menu")
+  const [mobileActionsDirection, setMobileActionsDirection] = useState<"forward" | "back">("forward")
   const [tutorialDialogOpen, setTutorialDialogOpen] = useState(() => !tutorialHidden())
   const [hideTutorial, setHideTutorial] = useState(false)
   const [settlementOpen, setSettlementOpen] = useState(false)
@@ -118,12 +125,27 @@ function EditableApp() {
   const Layout = MobileLayout
 
   function irASeccion(seccion: MobileSection) {
+    const currentIndex = mobileSectionOrder.indexOf(activeSection)
+    const nextIndex = mobileSectionOrder.indexOf(seccion)
+    if (nextIndex !== currentIndex) setSectionDirection(nextIndex > currentIndex ? "forward" : "back")
     setActiveSection(seccion)
     if (matchMedia("(max-width: 719px)").matches) window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  const vistaMobile = (seccion: MobileSection) => `mobile-view ${activeSection === seccion ? "is-active" : ""}`
+  const vistaMobile = (seccion: MobileSection) => `mobile-view section-${sectionDirection} ${activeSection === seccion ? "is-active" : ""}`
   const mostrarSeccion = (seccion: MobileSection) => !isMobile || activeSection === seccion
+  const cambiarPaginaMovimientos = (nextPage: number) => {
+    setMobileMovementPageDirection(nextPage > currentMobileMovementPage ? "next" : "prev")
+    setMobileMovementPage(nextPage)
+  }
+  const abrirAccionMobile = (view: "grafico" | "calculos") => {
+    setMobileActionsDirection("forward")
+    setMobileActionsView(view)
+  }
+  const volverAccionesMobile = () => {
+    setMobileActionsDirection("back")
+    setMobileActionsView("menu")
+  }
 
   function cerrarTutorialDialog(open: boolean) {
     if (open) {
@@ -533,7 +555,114 @@ function EditableApp() {
           <CategoryChartShareCard data={gastosPorCategoria} fecha={fechaCategorias} total={totalGastado} />
         </div>
       </div>
-      {isMobile ? <Header onClear={limpiarTodo} /> : null}
+      {isMobile ? (
+        <>
+          <Header onActionsClick={() => { setMobileActionsView("menu"); setMobileActionsDirection("forward"); setMobileActionsOpen(true) }} />
+          <Dialog open={mobileActionsOpen} onOpenChange={(open) => { setMobileActionsOpen(open); if (!open) setMobileActionsView("menu") }}>
+            <DialogContent className="mobile-actions-drawer">
+              {mobileActionsView === "menu" ? (
+                <div className={`mobile-actions-panel panel-${mobileActionsDirection}`} key="menu">
+                  <div className="mobile-actions-head">
+                    <button className="mobile-actions-back" onClick={() => setMobileActionsOpen(false)} type="button"><ArrowLeftIcon />Cerrar</button>
+                    <DialogTitle>Acciones</DialogTitle>
+                    <DialogDescription>Herramientas del reparto.</DialogDescription>
+                  </div>
+                  <div className="mobile-actions-list">
+                    <button onClick={() => abrirAccionMobile("grafico")} type="button">
+                      <PieChartIcon />
+                      <span><strong>Graficar</strong><small>compara gastos por categoría</small></span>
+                    </button>
+                    <button onClick={() => abrirAccionMobile("calculos")} type="button">
+                      <CalculatorIcon />
+                      <span><strong>Calcular</strong><small>revisa los cálculos paso a paso</small></span>
+                    </button>
+                    <ConfirmDialog title="Limpiar datos" description="Esto elimina todos los datos ingresados hasta el momento." confirmText="Limpiar datos" onConfirm={() => { limpiarTodo(); setMobileActionsOpen(false) }}>
+                      <button type="button">
+                        <ShredderIcon />
+                        <span><strong>Limpiar datos</strong><small>borra personas y movimientos</small></span>
+                      </button>
+                    </ConfirmDialog>
+                  </div>
+                </div>
+              ) : null}
+              {mobileActionsView === "grafico" ? (
+                <div className={`mobile-actions-panel panel-${mobileActionsDirection}`} key="grafico">
+                  <div className="mobile-actions-head">
+                    <button className="mobile-actions-back" onClick={volverAccionesMobile} type="button"><ArrowLeftIcon />Volver</button>
+                    <DialogTitle>Gráfico</DialogTitle>
+                    <DialogDescription>Compará gastos por categoría.</DialogDescription>
+                  </div>
+                  <Card className="category-chart-card">
+                    <div className="category-chart-layout">
+                      <CategoryPie data={gastosPorCategoria} />
+                      <CategoryDetailList data={gastosPorCategoria} />
+                    </div>
+                    <Separator />
+                    <div className="category-total"><span>Total gastado</span><strong>{formatoARS.format(totalGastado)}</strong></div>
+                  </Card>
+                  <div className="dialog-actions">
+                    <Button className="btn-outline" onClick={() => navigator.clipboard.writeText(textoCategorias(totalGastado, gastosPorCategoria, porcentaje)).then(() => toast.success("Resumen copiado."))} type="button">
+                      <CopyIcon data-icon="inline-start" />
+                      Copiar resumen
+                    </Button>
+                    <Button onClick={() => void exportarGraficoComoImagen()} type="button">
+                      <ShareIcon data-icon="inline-start" />
+                      Compartir
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+              {mobileActionsView === "calculos" ? (
+                <div className={`mobile-actions-panel panel-${mobileActionsDirection}`} key="calculos">
+                  <div className="mobile-actions-head">
+                    <button className="mobile-actions-back" onClick={volverAccionesMobile} type="button"><ArrowLeftIcon />Volver</button>
+                    <DialogTitle>Cálculos</DialogTitle>
+                    <DialogDescription>Revisá los cálculos paso a paso.</DialogDescription>
+                  </div>
+                  <div className="calculations-content" ref={calculosRef}>
+                    <div className="calculations-head">
+                      <div>
+                        <h2>Cálculos hechos</h2>
+                        <p>Cuentas hechas paso a paso. Se subraya quién pagó o transfirió cada movimiento.</p>
+                      </div>
+                      <Badge>{movimientos.length} movimientos</Badge>
+                    </div>
+                    <Separator />
+                    <ScrollArea className="calculations-scroll">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="calculation-movement-column">Movimiento</TableHead>
+                            {personas.map((persona) => <TableHead className="number" key={persona}>{persona}</TableHead>)}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {matrizCalculos.map((fila) => (
+                            <TableRow key={fila.paso}>
+                              <TableCell className="calculation-movement-column">{fila.movimiento} <strong className="calculation-movement-amount">({formatoARS.format(fila.monto)})</strong></TableCell>
+                              {personas.map((persona) => {
+                                const saldo = fila.saldos[persona] ?? 0
+                                const estadoSaldo = saldo > 0 ? "amount-positive" : saldo < 0 ? "amount-negative" : "amount-zero"
+                                return <TableCell className={`number ${estadoSaldo}${persona === fila.personaDestacada ? " amount-highlight" : ""}`} key={persona}>{formatoSaldoMatriz(saldo)}</TableCell>
+                              })}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
+                  <div className="dialog-actions">
+                    <Button onClick={() => void exportarCalculosComoImagen()} type="button">
+                      <DownloadIcon data-icon="inline-start" />
+                      Compartir
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </DialogContent>
+          </Dialog>
+        </>
+      ) : null}
 
       {isMobile ? (
       <Layout>
@@ -701,28 +830,26 @@ function EditableApp() {
               <span className="hint-mobile">Tocá en un movimiento para editarlo.</span>
               <span className="hint-desktop">Clickeá en un movimiento para editarlo.</span>
             </p>
-            {movimientos.length === 0 ? <p className="empty">Todavía no hay movimientos.</p> : null}
-            {movimientos.length > 0 ? (
-              <div className="movement-list">
-                {mobileMovimientos.map(({ movimiento, index }) => (
-                  <MovimientoItem
-                    key={`${movimiento.tipo}-${index}`}
-                    movimiento={movimiento}
-                    index={index}
-                    onEdit={abrirEdicion}
-                    onDelete={(item) => setMovimientos(movimientos.filter((_, movimientoIndex) => movimientoIndex !== item))}
-                    nombreMovimiento={nombreMovimiento}
-                  />
-                ))}
-              </div>
-            ) : null}
-            {movimientos.length > 3 ? <PaginationControls page={currentMobileMovementPage} totalPages={mobileMovementTotalPages} onPage={setMobileMovementPage} /> : null}
-            {movimientos.length > 0 ? (
-              <Button className="movement-copy-button movement-copy-mobile" data-tour="copy-movimientos-mobile" onClick={() => void compartirMovimientos()} type="button">
+            <div className={`movement-list page-slide-${mobileMovementPageDirection}`} key={currentMobileMovementPage}>
+              {movimientos.length === 0 ? <p className="empty">Todavía no hay movimientos.</p> : null}
+              {movimientos.length > 0 ? mobileMovimientos.map(({ movimiento, index }) => (
+                <MovimientoItem
+                  key={`${movimiento.tipo}-${index}`}
+                  movimiento={movimiento}
+                  index={index}
+                  onEdit={abrirEdicion}
+                  onDelete={(item) => setMovimientos(movimientos.filter((_, movimientoIndex) => movimientoIndex !== item))}
+                  nombreMovimiento={nombreMovimiento}
+                />
+              )) : null}
+            </div>
+            <div className="movement-list-actions">
+              <PaginationControls page={currentMobileMovementPage} totalPages={mobileMovementTotalPages} onPage={cambiarPaginaMovimientos} />
+              <Button className="movement-copy-button movement-copy-mobile" data-tour="copy-movimientos-mobile" disabled={movimientos.length === 0} onClick={() => void compartirMovimientos()} type="button">
                 <ShareIcon data-icon="inline-start" />
                 Compartir
               </Button>
-            ) : null}
+            </div>
             <Dialog open={edicion !== null} onOpenChange={(open) => !open && setEdicion(null)}>
               <DialogContent className="edit-dialog">
                 <DialogTitle>Editar movimiento</DialogTitle>

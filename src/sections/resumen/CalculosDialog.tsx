@@ -1,5 +1,6 @@
 import { CalculatorIcon, DownloadIcon } from "lucide-react"
 import type { RefObject } from "react"
+import type { ReactNode } from "react"
 import { SlidingText } from "../../components/shared/SlidingText"
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, ScrollArea, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui"
 import { formatoARS, formatoSaldoMatriz } from "../../lib/money"
@@ -13,17 +14,22 @@ type CalculosDialogProps = {
   movimientosCount: number
   contentRef: RefObject<HTMLDivElement | null>
   onExport: () => void
+  trigger?: ReactNode
 }
 
-export function CalculosDialog({ open, onOpenChange, personas, filas, movimientosCount, contentRef, onExport }: CalculosDialogProps) {
+export function CalculosDialog({ open, onOpenChange, personas, filas, movimientosCount, contentRef, onExport, trigger }: CalculosDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button className="btn-france" data-tour="calculos" type="button">
-          <CalculatorIcon data-icon="inline-start" />
-          Cálculos
-        </Button>
-      </DialogTrigger>
+      {trigger !== null ? (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button className="btn-france" data-tour="calculos" type="button">
+              <CalculatorIcon data-icon="inline-start" />
+              Cálculos
+            </Button>
+          )}
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="calculations-dialog" data-tour="calculos-dialog">
         <div className="calculations-content" ref={contentRef}>
           <div className="calculations-head">

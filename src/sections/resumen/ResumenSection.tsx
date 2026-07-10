@@ -5,7 +5,6 @@ import { PaginationControls } from "../../components/shared/PaginationControls"
 import { Button, Card } from "../../components/ui"
 import type { FilaCalculo, Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "../../types"
 import { useIsMobile } from "../../lib/viewport"
-import { CategoriasDialog } from "../total/CategoriasDialog"
 import { RepartirDialog } from "../total/RepartirDialog"
 import { CalculosDialog } from "./CalculosDialog"
 import { PersonaResumenItem } from "./PersonaResumenItem"
@@ -47,12 +46,6 @@ export function ResumenSection({
   onExportCalculos,
   onResumenOpenPersonaChange,
   onShareLink,
-  graficoOpen = false,
-  onGraficoOpenChange = () => undefined,
-  gastosPorCategoria = [],
-  totalGastado = 0,
-  onCopyCategorias = () => undefined,
-  onExportGrafico = () => undefined,
   settlementOpen = false,
   onSettlementOpenChange = () => undefined,
   pendientes = [],
@@ -61,10 +54,15 @@ export function ResumenSection({
 }: ResumenSectionProps) {
   const isMobile = useIsMobile()
   const [page, setPage] = useState(1)
-  const pageSize = isMobile ? 3 : saldos.length || 1
+  const [pageDirection, setPageDirection] = useState<"next" | "prev">("next")
+  const pageSize = isMobile ? 4 : saldos.length || 1
   const totalPages = Math.max(1, Math.ceil(saldos.length / pageSize))
   const currentPage = Math.min(page, totalPages)
   const visibleSaldos = saldos.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const goToPage = (nextPage: number) => {
+    setPageDirection(nextPage > currentPage ? "next" : "prev")
+    setPage(nextPage)
+  }
 
   return (
     <Card className={`summary-card ${className}`} id="resumen" data-tour="resumen">
@@ -80,34 +78,34 @@ export function ResumenSection({
           </div>
         </div>
         <div className="summary-actions summary-chart-action">
-          {isMobile ? (
-            <CategoriasDialog data={gastosPorCategoria} onCopy={onCopyCategorias} onExport={onExportGrafico} onOpenChange={onGraficoOpenChange} open={graficoOpen} total={totalGastado} />
-          ) : (
+          {!isMobile ? (
             <Button className="btn-outline" onClick={onShareLink} type="button"><ShareIcon data-icon="inline-start" />Compartir resumen</Button>
-          )}
+          ) : null}
         </div>
       </div>
-      <div className="summary-list">
+      <div className={`summary-list page-slide-${pageDirection}`} key={currentPage}>
         {saldos.length === 0 ? <p className="empty">Agregá personas para ver saldos.</p> : null}
         {visibleSaldos.map((saldo) => (
           <PersonaResumenItem key={saldo.persona} onClick={() => onResumenOpenPersonaChange(saldo.persona)} persona={saldo.persona} saldo={saldo.saldo} />
         ))}
       </div>
-      {isMobile && saldos.length > 3 ? <PaginationControls page={currentPage} totalPages={totalPages} onPage={setPage} /> : null}
+      {isMobile ? <PaginationControls page={currentPage} totalPages={totalPages} onPage={goToPage} /> : null}
       <div className="summary-actions summary-bottom-actions" data-tour="total">
-        <div className="summary-calculos-action">
-          <CalculosDialog
-            contentRef={calculosRef}
-            filas={matrizCalculos}
-            movimientosCount={movimientos.length}
-            onExport={onExportCalculos}
-            onOpenChange={onCalculosOpenChange}
-            open={calculosOpen}
-            personas={personas}
-          />
-        </div>
-        {isMobile ? <Button className="btn-outline" onClick={onShareLink} type="button"><ShareIcon data-icon="inline-start" />Compartir resumen</Button> : null}
+        {!isMobile ? (
+          <div className="summary-calculos-action">
+            <CalculosDialog
+              contentRef={calculosRef}
+              filas={matrizCalculos}
+              movimientosCount={movimientos.length}
+              onExport={onExportCalculos}
+              onOpenChange={onCalculosOpenChange}
+              open={calculosOpen}
+              personas={personas}
+            />
+          </div>
+        ) : null}
         {isMobile ? <RepartirDialog open={settlementOpen} onOpenChange={onSettlementOpenChange} pendientes={pendientes} resumenCopiable={resumenCopiable} onShare={onShareReparto} /> : null}
+        {isMobile ? <Button className="btn-outline summary-share-mobile" onClick={onShareLink} type="button"><ShareIcon data-icon="inline-start" />Compartir resumen</Button> : null}
       </div>
     </Card>
   )
