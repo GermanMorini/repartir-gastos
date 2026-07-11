@@ -3985,6 +3985,7 @@ body {
 
   .summary-card.mobile-view.is-active {
     display: grid;
+    padding-bottom: 9.5rem;
   }
 
   .summary-head {
@@ -4227,12 +4228,21 @@ body {
   }
 
   .summary-bottom-actions {
+    position: fixed;
+    z-index: 32;
+    right: 1rem;
+    bottom: calc(5.35rem + env(safe-area-inset-bottom));
+    left: 1rem;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 0.75rem;
     order: 5;
-    width: 100%;
-    margin-top: 1rem;
+    width: auto;
+    margin-top: 0;
+    border-radius: 1rem;
+    background: rgb(248 250 252 / 0.94);
+    padding: 0.65rem 0;
+    backdrop-filter: blur(10px);
   }
 
   .summary-bottom-actions .btn,
@@ -4424,7 +4434,7 @@ body {
     z-index: 1;
     display: grid;
     align-content: start;
-    height: 12.55rem;
+    height: calc(var(--visible-items, 3) * 4.15rem);
     border: 0;
     border-radius: 0;
     overflow: hidden;
@@ -4494,7 +4504,7 @@ body {
   .summary-list {
     display: grid;
     align-content: start;
-    height: 20rem;
+    height: calc(var(--visible-items, 4) * 5rem);
     overflow: hidden;
   }
 

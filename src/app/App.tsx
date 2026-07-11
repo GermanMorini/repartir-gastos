@@ -1,6 +1,7 @@
 import { ArrowLeftIcon, ArrowLeftRightIcon, CalculatorIcon, ChevronDownIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, ShredderIcon } from "lucide-react"
 import { driver } from "driver.js"
 import type { DriveStep, Driver } from "driver.js"
+import type { CSSProperties } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import "driver.js/dist/driver.css"
@@ -50,6 +51,31 @@ const mobileSectionOrder: MobileSection[] = ["personas", "movimientos", "resumen
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
 type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
 
+function useMobileVisibleRows() {
+  const calculate = () => {
+    const height = typeof window === "undefined" ? 720 : window.innerHeight
+    const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
+    return {
+      personas: clamp(Math.floor((height - 360) / 80), 2, 7),
+      resumen: clamp(Math.floor((height - 330) / 80), 2, 7),
+      movimientos: clamp(Math.floor((height - 325) / 66), 2, 8),
+    }
+  }
+  const [rows, setRows] = useState(calculate)
+
+  useEffect(() => {
+    const update = () => setRows(calculate())
+    window.addEventListener("resize", update)
+    window.visualViewport?.addEventListener("resize", update)
+    return () => {
+      window.removeEventListener("resize", update)
+      window.visualViewport?.removeEventListener("resize", update)
+    }
+  }, [])
+
+  return rows
+}
+
 export default function App() {
   const [hash, setHash] = useState(() => window.location.hash)
 
@@ -76,6 +102,7 @@ function EditableApp() {
   const [mobileMovementPage, setMobileMovementPage] = useState(1)
   const [mobileMovementPageDirection, setMobileMovementPageDirection] = useState<"next" | "prev">("next")
   const [mobileMovementPageAnimating, setMobileMovementPageAnimating] = useState(false)
+  const mobileVisibleRows = useMobileVisibleRows()
   const [sectionDirection, setSectionDirection] = useState<"forward" | "back">("forward")
   const [sectionAnimating, setSectionAnimating] = useState(false)
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
@@ -119,9 +146,10 @@ function EditableApp() {
     [movimientos],
   )
   const saldos = useMemo(() => calcularSaldos(personas, movimientos), [personas, movimientos])
-  const mobileMovementTotalPages = Math.max(1, Math.ceil(movimientosCard.length / 3))
+  const mobileMovementPageSize = mobileVisibleRows.movimientos
+  const mobileMovementTotalPages = Math.max(1, Math.ceil(movimientosCard.length / mobileMovementPageSize))
   const currentMobileMovementPage = Math.min(mobileMovementPage, mobileMovementTotalPages)
-  const mobileMovimientos = movimientosCard.slice((currentMobileMovementPage - 1) * 3, currentMobileMovementPage * 3)
+  const mobileMovimientos = movimientosCard.slice((currentMobileMovementPage - 1) * mobileMovementPageSize, currentMobileMovementPage * mobileMovementPageSize)
   const matrizCalculos = useMemo(() => getMatrizCalculos(personas, movimientosCard.map((item) => item.movimiento)), [personas, movimientosCard])
   const gastosPorCategoria = useMemo(() => getGastosPorCategoria(movimientos), [movimientos])
   const pendientes = useMemo(() => calcularTransferenciasPendientes(saldos), [saldos])
@@ -830,6 +858,7 @@ function EditableApp() {
               onDelete={borrarPersona}
               onStartTutorial={() => void iniciarTutorialConMockup()}
               suppressListAnimation={sectionAnimating}
+              mobilePageSize={mobileVisibleRows.personas}
             />
           ) : null}
 
@@ -995,7 +1024,7 @@ function EditableApp() {
               <span className="hint-mobile">Tocá en un movimiento para editarlo.</span>
               <span className="hint-desktop">Clickeá en un movimiento para editarlo.</span>
             </p>
-            <div className={`movement-list ${mobileMovementPageAnimating && !sectionAnimating ? `page-slide-${mobileMovementPageDirection}` : ""}`} key={currentMobileMovementPage}>
+            <div className={`movement-list ${mobileMovementPageAnimating && !sectionAnimating ? `page-slide-${mobileMovementPageDirection}` : ""}`} key={currentMobileMovementPage} style={{ "--visible-items": mobileMovementPageSize } as CSSProperties}>
               {movimientos.length === 0 ? <Badge className="empty-state-badge">Sin movimientos</Badge> : null}
               {movimientos.length > 0 ? mobileMovimientos.map(({ movimiento, index }) => (
                 <MovimientoItem
@@ -1161,6 +1190,7 @@ function EditableApp() {
               saldos={saldos}
               settlementOpen={settlementOpen}
               suppressListAnimation={sectionAnimating}
+              mobilePageSize={mobileVisibleRows.resumen}
               totalGastado={totalGastado}
             />
           ) : null}

@@ -1,4 +1,5 @@
 import { UsersIcon } from "lucide-react"
+import type { CSSProperties } from "react"
 import { useEffect, useRef, useState } from "react"
 import { SectionHeader } from "../../components/layout/SectionHeader"
 import { PaginationControls } from "../../components/shared/PaginationControls"
@@ -18,6 +19,7 @@ export function PersonasSection({
   onStartTutorial,
   demoActiveTarget,
   suppressListAnimation,
+  mobilePageSize,
 }: {
   className: string
   personas: Persona[]
@@ -28,13 +30,14 @@ export function PersonasSection({
   onStartTutorial: () => void
   demoActiveTarget?: string | null
   suppressListAnimation?: boolean
+  mobilePageSize?: number
 }) {
   const isMobile = useIsMobile()
   const [page, setPage] = useState(1)
   const [pageDirection, setPageDirection] = useState<"next" | "prev">("next")
   const [pageAnimating, setPageAnimating] = useState(false)
   const pageAnimationTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
-  const pageSize = isMobile ? 4 : personas.length || 1
+  const pageSize = isMobile ? Math.max(1, mobilePageSize ?? 4) : personas.length || 1
   const totalPages = Math.max(1, Math.ceil(personas.length / pageSize))
   const currentPage = Math.min(page, totalPages)
   const visiblePersonas = personas.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -59,7 +62,7 @@ export function PersonasSection({
         variant="people"
         action={<div className="people-actions"><span>{personas.length} personas</span></div>}
       />
-      <div className={`person-chips ${pageAnimating && !suppressListAnimation ? `page-slide-${pageDirection}` : ""}`} key={currentPage}>
+      <div className={`person-chips ${pageAnimating && !suppressListAnimation ? `page-slide-${pageDirection}` : ""}`} key={currentPage} style={{ "--visible-items": pageSize } as CSSProperties}>
         {personas.length === 0 ? <Badge className="empty-state-badge">Sin personas</Badge> : null}
         {visiblePersonas.map((persona) => <PersonaItem key={persona} persona={persona} onDelete={onDelete} />)}
       </div>

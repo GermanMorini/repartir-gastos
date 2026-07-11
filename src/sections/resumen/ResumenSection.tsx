@@ -1,5 +1,5 @@
 import { ShareIcon, UsersIcon } from "lucide-react"
-import type { RefObject } from "react"
+import type { CSSProperties, RefObject } from "react"
 import { useEffect, useRef, useState } from "react"
 import { PaginationControls } from "../../components/shared/PaginationControls"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +35,7 @@ type ResumenSectionProps = {
   resumenCopiable?: string
   onShareReparto?: () => void
   suppressListAnimation?: boolean
+  mobilePageSize?: number
 }
 
 export function ResumenSection({
@@ -55,13 +56,14 @@ export function ResumenSection({
   resumenCopiable = "",
   onShareReparto = () => undefined,
   suppressListAnimation = false,
+  mobilePageSize,
 }: ResumenSectionProps) {
   const isMobile = useIsMobile()
   const [page, setPage] = useState(1)
   const [pageDirection, setPageDirection] = useState<"next" | "prev">("next")
   const [pageAnimating, setPageAnimating] = useState(false)
   const pageAnimationTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
-  const pageSize = isMobile ? 4 : saldos.length || 1
+  const pageSize = isMobile ? Math.max(1, mobilePageSize ?? 4) : saldos.length || 1
   const totalPages = Math.max(1, Math.ceil(saldos.length / pageSize))
   const currentPage = Math.min(page, totalPages)
   const visibleSaldos = saldos.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -96,7 +98,7 @@ export function ResumenSection({
           ) : null}
         </div>
       </div>
-      <div className={`summary-list ${pageAnimating && !suppressListAnimation ? `page-slide-${pageDirection}` : ""}`} key={currentPage}>
+      <div className={`summary-list ${pageAnimating && !suppressListAnimation ? `page-slide-${pageDirection}` : ""}`} key={currentPage} style={{ "--visible-items": pageSize } as CSSProperties}>
         {saldos.length === 0 ? <Badge className="empty-state-badge">Sin saldos</Badge> : null}
         {visibleSaldos.map((saldo) => (
           <PersonaResumenItem key={saldo.persona} onClick={() => onResumenOpenPersonaChange(saldo.persona)} persona={saldo.persona} saldo={saldo.saldo} />
