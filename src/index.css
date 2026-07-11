@@ -1214,6 +1214,32 @@ h2 {
   background: #fff;
 }
 
+.dialog-content > .dialog-close,
+[data-slot="sheet-content"] > [data-slot="sheet-close"] {
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: #dc2626 !important;
+  color: #fff !important;
+  box-shadow: 0 8px 18px rgb(220 38 38 / 0.25);
+  padding: 0;
+}
+
+.dialog-content > .dialog-close:hover,
+[data-slot="sheet-content"] > [data-slot="sheet-close"]:hover {
+  background: #b91c1c !important;
+}
+
+.dialog-content > .dialog-close svg,
+[data-slot="sheet-content"] > [data-slot="sheet-close"] svg {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 3;
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -2952,16 +2978,28 @@ body {
   }
 
   .desktop-form-stack .tabs-list {
+    position: relative;
+    z-index: 2;
+    height: auto;
+    min-height: 3.4rem;
     margin: 0 0 1rem;
     border: 1px solid var(--border);
     border-radius: 8px;
+    background: #fff;
     overflow: hidden;
   }
 
   .desktop-form-stack .tabs-trigger {
+    height: auto;
     min-height: 3.4rem;
     font-size: 1.05rem;
     font-weight: 900;
+  }
+
+  .desktop-form-stack [data-slot="tabs-content"] {
+    position: relative;
+    z-index: 1;
+    margin-top: 0;
   }
 
   .desktop-mini-form {
@@ -3244,7 +3282,7 @@ body {
 
   .desktop-participants-tooltip-content {
     position: absolute;
-    z-index: 30;
+    z-index: 5000;
     bottom: calc(100% + 0.55rem);
     left: 50%;
     max-width: min(26rem, 60vw);
@@ -4034,6 +4072,55 @@ body {
 }
 
 @media (max-width: 719px) {
+  .movement-form-launcher {
+    gap: 0.85rem;
+  }
+
+  .mobile-add-movement-trigger {
+    width: 100%;
+    min-height: 3rem;
+    border-radius: 0.75rem;
+    background: #6d28d9;
+    color: #fff;
+    font-weight: 900;
+  }
+
+  .mobile-add-movement-trigger:hover {
+    background: #5b21b6;
+  }
+
+  .mobile-movement-sheet {
+    width: 100vw;
+    max-height: 88dvh;
+    border-radius: 18px 18px 0 0;
+    padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    overflow: auto;
+  }
+
+  .mobile-movement-sheet .mobile-sheet-head {
+    display: grid;
+    gap: 0.25rem;
+    padding-right: 2.7rem;
+  }
+
+  .mobile-movement-sheet .mobile-sheet-head h2 {
+    margin: 0;
+    color: #111827;
+    font-size: 1.25rem;
+    font-weight: 950;
+  }
+
+  .mobile-movement-sheet .mobile-sheet-head p {
+    margin: 0;
+    color: #667085;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .mobile-movement-sheet .tabs-list {
+    margin-top: 0.75rem;
+  }
+
   .mobile-two-fields {
     display: grid;
     grid-column: 1 / -1;
@@ -4300,11 +4387,20 @@ body {
   }
 
   .movement-form .tabs-list {
-    margin-bottom: 0.65rem;
+    height: auto;
+    min-height: 2.55rem;
+    margin: 0 0 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+    padding: 0;
   }
 
   .movement-form .tabs-trigger {
+    height: auto;
     min-height: 2.55rem;
+    background: #fff;
   }
 
   .empty-state-badge {

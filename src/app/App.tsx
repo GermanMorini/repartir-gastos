@@ -79,6 +79,7 @@ function EditableApp() {
   const [sectionDirection, setSectionDirection] = useState<"forward" | "back">("forward")
   const [sectionAnimating, setSectionAnimating] = useState(false)
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
+  const [mobileMovementSheetOpen, setMobileMovementSheetOpen] = useState(false)
   const [mobileActionsView, setMobileActionsView] = useState<"menu" | "grafico" | "calculos">("menu")
   const [mobileActionsDirection, setMobileActionsDirection] = useState<"forward" | "back">("forward")
   const [mobileActionsPanelAnimating, setMobileActionsPanelAnimating] = useState(false)
@@ -832,7 +833,7 @@ function EditableApp() {
             />
           ) : null}
 
-          {mostrarSeccion("movimientos") ? <section className={`app-section movement-form ${vistaMobile("movimientos")}`} id="movimientos" data-tour="movimientos">
+          {mostrarSeccion("movimientos") ? <section className={`app-section movement-form movement-form-launcher ${vistaMobile("movimientos")}`} id="movimientos" data-tour="movimientos">
             <div className="section-head movement-form-head">
               <div className="section-title section-title-movements">
                 <span className="section-icon"><ArrowLeftRightIcon /></span>
@@ -849,90 +850,100 @@ function EditableApp() {
                 </Button>
               </div>
             </div>
-            <Tabs value={movementTab} onValueChange={(value) => setMovementTab(value as "gasto" | "transferencia")}>
-              <TabsList className="tabs-list">
-                <TabsTrigger className="tabs-trigger" value="gasto">Gasto</TabsTrigger>
-                <TabsTrigger className="tabs-trigger" value="transferencia">Transferencia</TabsTrigger>
-              </TabsList>
-              <TabsContent className="form-body" value="gasto">
-                <p className="tab-hint">Cargá un gasto y entre quiénes se reparte.</p>
-                <label>
-                  <Input placeholder="Descripción (cena, hotel, ...)" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
-                </label>
-                <label>
-                  <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
-                </label>
-                <div className="mobile-two-fields">
-                  <label>
-                    <Select value={gasto.pagador} onValueChange={(pagador) => setGasto({ ...gasto, pagador })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Quién pagó" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </label>
-                  <label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button className="select-like" type="button">
-                          {gasto.participantes.length === 0 ? "Participantes" : gasto.participantes.length === personas.length ? "Todos" : `${gasto.participantes.length} seleccionados`}
-                          <ChevronDownIcon data-icon="inline-end" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="participants-menu">
-                        <DropdownMenuLabel>Participantes</DropdownMenuLabel>
-                        <DropdownMenuSeparator className="dropdown-separator" />
-                        <DropdownMenuGroup>
-                          {personas.map((persona) => (
-                            <DropdownMenuCheckboxItem
-                              checked={gasto.participantes.includes(persona)}
-                              key={persona}
-                              onCheckedChange={(checked) =>
-                                setGasto({
-                                  ...gasto,
-                                  participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona),
-                                })
-                              }
-                            >
-                              {persona}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </DropdownMenuGroup>
-                        <DropdownMenuSeparator className="dropdown-separator" />
-                        <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: gasto.participantes.length === personas.length ? [] : personas })} type="button">
-                          {gasto.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
-                        </Button>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </label>
+            <Button className="mobile-add-movement-trigger" onClick={() => setMobileMovementSheetOpen(true)} type="button">
+              <PlusIcon data-icon="inline-start" />
+              Añadir
+            </Button>
+            <Sheet open={mobileMovementSheetOpen} onOpenChange={setMobileMovementSheetOpen}>
+              <SheetContent className="mobile-movement-sheet movement-form" side="bottom">
+                <div className="mobile-sheet-head">
+                  <h2>Añadir movimiento</h2>
+                  <p>Podés cargar varios movimientos sin cerrar esta ventana.</p>
                 </div>
-                <div className="add-expense-row">
-                  <Select value={gasto.categoria} onValueChange={(categoria) => setGasto({ ...gasto, categoria: categoria as CategoriaGasto })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {CATEGORIAS_GASTO.map((categoria) => (
-                          <SelectItem key={categoria.key} value={categoria.key}>
-                            <CategoriaIcon categoria={categoria.key} />
-                            {categoria.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  <Button className={`add-movement ${demoActiveTarget === "add-expense-button" ? "tutorial-demo-press" : ""}`} data-tour="add-expense-button" onClick={agregarGasto} type="button">
-                    <PlusIcon data-icon="inline-start" />
-                    Añadir gasto
-                  </Button>
-                </div>
-              </TabsContent>
-              <TabsContent className="form-body" value="transferencia">
+                <Tabs value={movementTab} onValueChange={(value) => setMovementTab(value as "gasto" | "transferencia")}>
+                  <TabsList className="tabs-list">
+                    <TabsTrigger className="tabs-trigger" value="gasto">Gasto</TabsTrigger>
+                    <TabsTrigger className="tabs-trigger" value="transferencia">Transferencia</TabsTrigger>
+                  </TabsList>
+                  <TabsContent className="form-body" value="gasto">
+                    <p className="tab-hint">Cargá un gasto y entre quiénes se reparte.</p>
+                    <label>
+                      <Input placeholder="Descripción (cena, hotel, ...)" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
+                    </label>
+                    <label>
+                      <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
+                    </label>
+                    <div className="mobile-two-fields">
+                      <label>
+                        <Select value={gasto.pagador} onValueChange={(pagador) => setGasto({ ...gasto, pagador })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Quién pagó" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </label>
+                      <label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button className="select-like" type="button">
+                              {gasto.participantes.length === 0 ? "Participantes" : gasto.participantes.length === personas.length ? "Todos" : `${gasto.participantes.length} seleccionados`}
+                              <ChevronDownIcon data-icon="inline-end" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="participants-menu">
+                            <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="dropdown-separator" />
+                            <DropdownMenuGroup>
+                              {personas.map((persona) => (
+                                <DropdownMenuCheckboxItem
+                                  checked={gasto.participantes.includes(persona)}
+                                  key={persona}
+                                  onCheckedChange={(checked) =>
+                                    setGasto({
+                                      ...gasto,
+                                      participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona),
+                                    })
+                                  }
+                                >
+                                  {persona}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuGroup>
+                            <DropdownMenuSeparator className="dropdown-separator" />
+                            <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: gasto.participantes.length === personas.length ? [] : personas })} type="button">
+                              {gasto.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                            </Button>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </label>
+                    </div>
+                    <div className="add-expense-row">
+                      <Select value={gasto.categoria} onValueChange={(categoria) => setGasto({ ...gasto, categoria: categoria as CategoriaGasto })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Categoría" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {CATEGORIAS_GASTO.map((categoria) => (
+                              <SelectItem key={categoria.key} value={categoria.key}>
+                                <CategoriaIcon categoria={categoria.key} />
+                                {categoria.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <Button className={`add-movement ${demoActiveTarget === "add-expense-button" ? "tutorial-demo-press" : ""}`} data-tour="add-expense-button" onClick={agregarGasto} type="button">
+                        <PlusIcon data-icon="inline-start" />
+                        Añadir gasto
+                      </Button>
+                    </div>
+                  </TabsContent>
+                  <TabsContent className="form-body" value="transferencia">
                 <p className="tab-hint">Registrá un pago realizado.</p>
                 <label>
                   <Input placeholder="Descripción (cena, hotel, ...)" value={transferencia.descripcion} onChange={(event) => setTransferencia({ ...transferencia, descripcion: event.target.value })} />
@@ -971,7 +982,9 @@ function EditableApp() {
                   Registrar transferencia
                 </Button>
               </TabsContent>
-            </Tabs>
+                </Tabs>
+              </SheetContent>
+            </Sheet>
           </section> : null}
 
           {mostrarSeccion("movimientos") ? <section className={`app-section movements-section ${vistaMobile("movimientos")}`}>

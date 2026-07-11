@@ -69,14 +69,22 @@ function PersonAvatar({ persona, className = "" }: { persona: Persona; className
 
 function PersonCarousel({ personas, selected, onSelect, renderItem, showArrows = true, showPagination = false }: { personas: Persona[]; selected: Persona; onSelect: (persona: Persona) => void; renderItem?: (persona: Persona) => ReactNode; showArrows?: boolean; showPagination?: boolean }) {
   const [api, setApi] = useState<CarouselApi>()
+  const [canScrollPrev, setCanScrollPrev] = useState(false)
+  const [canScrollNext, setCanScrollNext] = useState(false)
   const selectedIndex = Math.max(0, personas.indexOf(selected))
 
   useEffect(() => {
     if (!api) return
+    const updateControls = () => {
+      setCanScrollPrev(api.canScrollPrev())
+      setCanScrollNext(api.canScrollNext())
+    }
     const sync = () => {
       const persona = personas[api.selectedScrollSnap()]
       if (persona) onSelect(persona)
+      updateControls()
     }
+    updateControls()
     api.on("select", sync)
     api.on("reInit", sync)
     return () => {
@@ -87,7 +95,12 @@ function PersonCarousel({ personas, selected, onSelect, renderItem, showArrows =
 
   useEffect(() => {
     const index = personas.indexOf(selected)
-    if (api && index >= 0 && api.selectedScrollSnap() !== index) api.scrollTo(index)
+    if (!api || index < 0) return
+    if (api.selectedScrollSnap() !== index) api.scrollTo(index)
+    window.requestAnimationFrame(() => {
+      setCanScrollPrev(api.canScrollPrev())
+      setCanScrollNext(api.canScrollNext())
+    })
   }, [api, personas, selected])
 
   return (
@@ -109,11 +122,11 @@ function PersonCarousel({ personas, selected, onSelect, renderItem, showArrows =
       {showArrows ? <CarouselNext className="btn-outline person-carousel-arrow" /> : null}
       {showPagination ? (
         <div className="person-carousel-pagination">
-          <button aria-label="Persona anterior" disabled={!api?.canScrollPrev()} onClick={() => api?.scrollPrev()} type="button"><ChevronLeftIcon /></button>
+          <button aria-label="Persona anterior" disabled={!canScrollPrev} onClick={() => api?.scrollPrev()} type="button"><ChevronLeftIcon /></button>
           <div>
             {personas.map((persona, index) => <button aria-label={`Ver ${persona}`} className={index === selectedIndex ? "active" : ""} key={persona} onClick={() => { onSelect(persona); api?.scrollTo(index) }} type="button" />)}
           </div>
-          <button aria-label="Persona siguiente" disabled={!api?.canScrollNext()} onClick={() => api?.scrollNext()} type="button"><ChevronRightIcon /></button>
+          <button aria-label="Persona siguiente" disabled={!canScrollNext} onClick={() => api?.scrollNext()} type="button"><ChevronRightIcon /></button>
         </div>
       ) : null}
     </Carousel>
@@ -300,7 +313,7 @@ export function PersonSummaryDesktopView({ personas, movimientos, initialPersona
           <p>Revisá cuánto debe pagar o recibir cada persona.</p>
         </div>
       </header>
-      {readOnly ? <PersonCarousel personas={personas} selected={selected} showArrows={false} showPagination onSelect={(persona) => { setSelected(persona); setDetail("cards") }} renderItem={(persona) => <SummaryStats resumen={getResumenPersona(persona, movimientos)} saldoClickable onOpen={(view) => { setSelected(persona); setDetail(view) }} />} /> : null}
+      {readOnly ? <PersonCarousel personas={personas} selected={selected} showArrows={false} showPagination onSelect={(persona) => { setSelected(persona); setDetail("cards") }} renderItem={(persona) => <SummaryStats resumen={getResumenPersona(persona, movimientos)} showTransferButton onOpen={(view) => { setSelected(persona); setDetail(view) }} />} /> : null}
       {!readOnly ? <div className="ps-desktop-detail">
         <aside>
           <SlidingText className="ps-side-name">{resumen.persona}</SlidingText>

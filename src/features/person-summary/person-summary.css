@@ -891,7 +891,7 @@
 
   .ps-desktop-view.is-readonly .person-carousel {
     grid-template-columns: minmax(0, 1fr);
-    width: min(100%, 64rem);
+    width: min(100%, 42rem);
     align-self: center;
     gap: 1rem;
   }
