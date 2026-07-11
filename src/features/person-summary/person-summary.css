@@ -128,8 +128,10 @@
 .person-carousel-pagination > div {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
   gap: 0.45rem;
+  min-height: 3rem;
 }
 
 .person-carousel-pagination > div button {
@@ -143,8 +145,6 @@
 }
 
 .person-carousel-pagination > div button.active {
-  width: 1.15rem;
-  height: 1.15rem;
   background: #6d28d9;
 }
 
@@ -175,12 +175,12 @@
 .person-pill.is-active,
 .ps-person-card.is-active {
   border-color: #a78bfa;
-  box-shadow: 0 0 0 1px #c4b5fd;
 }
 
 .ps-stats {
   padding: 1rem;
   margin-bottom: 1rem;
+  box-shadow: none !important;
 }
 
 .ps-stats-person {
@@ -272,7 +272,7 @@
   .ps-mobile-page .ps-stats {
     border-radius: 24px;
     padding: 1.85rem 1.4rem;
-    box-shadow: 0 18px 45px rgb(15 23 42 / 0.12);
+    box-shadow: none !important;
   }
 
   .ps-mobile-page .ps-stat-row {
@@ -426,8 +426,10 @@
   min-width: 0;
 }
 
-.ps-detail-list > .btn {
-  margin: 1rem 1rem 0;
+.ps-detail-list > .ps-bottom-back {
+  width: calc(100% - 2rem);
+  margin: 1rem;
+  justify-content: center;
 }
 
 .ps-detail-scroll {
@@ -544,9 +546,11 @@
   animation: ps-detail-close 180ms ease-in forwards;
 }
 
-.ps-mobile-page .ps-detail-list > .btn {
-  width: fit-content;
-  margin: max(0.85rem, env(safe-area-inset-top)) 1rem 0;
+.ps-mobile-page .ps-detail-list > .ps-bottom-back,
+.ps-mobile-page .ps-page-back {
+  width: calc(100% - 2rem);
+  margin: 1rem;
+  justify-content: center;
 }
 
 .ps-mobile-page .ps-detail-list header {
@@ -822,9 +826,10 @@
     animation: ps-detail-close 180ms ease-in forwards;
   }
 
-  .ps-desktop-drawer .ps-detail-list > .btn {
-    width: fit-content;
-    margin: 1rem 1rem 0;
+  .ps-desktop-drawer .ps-detail-list > .ps-bottom-back {
+    width: calc(100% - 2rem);
+    margin: 1rem;
+    justify-content: center;
   }
 
   .ps-desktop-drawer .ps-detail-list header {
@@ -943,8 +948,10 @@
   .person-carousel-pagination > div {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
     gap: 0.45rem;
+    min-height: 3rem;
   }
 
   .person-carousel-pagination > div button {
@@ -958,7 +965,6 @@
   }
 
   .person-carousel-pagination > div button.active {
-    width: 2rem;
     background: #6d28d9;
   }
 

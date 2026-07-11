@@ -30,6 +30,10 @@
     z-index: 100;
   }
 
+  .share-page:has(.ps-detail-list) .share-back {
+    z-index: 0;
+  }
+
   .share-back {
     top: auto;
     bottom: max(0.85rem, env(safe-area-inset-bottom));

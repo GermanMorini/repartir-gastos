@@ -212,7 +212,6 @@ function DetailList({ resumen, view, pendientes, onBack, closing = false }: { re
 
   return (
     <Card className={`ps-detail-list ps-detail-${view}${closing ? " is-closing" : ""}${view === "transferencias" && resumen.saldo < 0 ? " negative" : ""}`}>
-      {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ChevronLeftIcon />Volver</Button> : null}
       <header><strong>{title}</strong><small>{subtitle}</small><b>{formatoARS.format(amount)}</b>{view === "transferencias" && resumen.saldo < 0 ? <span className="ps-transfer-hint">Toca un monto para copiarlo al portapapeles</span> : null}</header>
       <Separator />
       <ScrollArea className="ps-detail-scroll">
@@ -221,6 +220,7 @@ function DetailList({ resumen, view, pendientes, onBack, closing = false }: { re
           {view !== "transferencias" && !resumen.tieneMovimientos ? <p className="empty">{resumen.persona} todavía no tiene movimientos.</p> : null}
         </div>
       </ScrollArea>
+      {onBack ? <Button className="btn-outline ps-bottom-back" onClick={onBack} type="button"><ChevronLeftIcon />Volver</Button> : null}
     </Card>
   )
 }
@@ -242,7 +242,7 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
   return (
     <main className={`ps-mobile-page${readOnly ? "" : " is-slide-page"}${closing ? " is-closing" : ""}`} data-tour={selected === "Norberto" ? "resumen-norberto-dialog" : undefined}>
       <header className="ps-mobile-head">
-        {onBack ? <Button className="btn-outline" onClick={onBack} type="button"><ArrowLeftIcon /></Button> : <span />}
+        <span />
         <h1>{readOnly ? "Resumen interactivo" : title}</h1>
         {onShare ? <Button className="btn-outline" onClick={() => onShare(selected)} type="button"><ShareIcon /></Button> : <span />}
       </header>
@@ -265,6 +265,7 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
           )}
         />
         {detail !== "cards" ? <DetailList closing={closingDetail} pendientes={pendientesPersona} resumen={resumen} view={detail} onBack={closeDetail} /> : null}
+        {onBack && detail === "cards" ? <Button className="btn-outline ps-bottom-back ps-page-back" onClick={onBack} type="button"><ArrowLeftIcon />Volver</Button> : null}
       </ScrollArea>
     </main>
   )

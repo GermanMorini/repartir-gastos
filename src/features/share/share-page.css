@@ -14,7 +14,7 @@
 
 .share-back {
   position: fixed;
-  z-index: 95;
+  z-index: 70;
   top: max(0.75rem, env(safe-area-inset-top));
   left: max(0.75rem, env(safe-area-inset-left));
 }
