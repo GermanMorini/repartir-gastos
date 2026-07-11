@@ -1,6 +1,6 @@
 import { WalletCardsIcon } from "lucide-react"
 import { MoneyAmount } from "../../components/shared/MoneyAmount"
-import { Card } from "../../components/ui"
+import { Card } from "@/components/ui/card"
 import type { ResumenCategoria, TransferenciaPendiente } from "../../types"
 import { CategoriasDialog } from "./CategoriasDialog"
 import { RepartirDialog } from "./RepartirDialog"

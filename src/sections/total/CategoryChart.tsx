@@ -1,5 +1,5 @@
 import { CategoryBadge } from "../../components/shared/CategoryBadge"
-import { Card } from "../../components/ui"
+import { Card } from "@/components/ui/card"
 import { getCategoria } from "../../lib/categorias"
 import { formatoARS, porcentaje } from "../../lib/money"
 import type { ResumenCategoria } from "../../types"

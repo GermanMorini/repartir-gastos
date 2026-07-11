@@ -1,7 +1,8 @@
 import { CheckIcon, CopyIcon, ShareIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { CSSProperties, ReactNode } from "react"
-import { Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "../../components/ui"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { formatoARS } from "../../lib/money"
 import type { TransferenciaPendiente } from "../../types"
 

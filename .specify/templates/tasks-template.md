@@ -72,9 +72,9 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T008 Configure error handling and logging infrastructure
 - [ ] T009 Setup environment configuration management
 - [ ] T0XX Identify whether this feature touches monetary logic, shared views,
-      mobile/desktop layout separation, shadcn/Radix primitives, or CSS ownership
-- [ ] T0XX Confirm any new UI primitive reuses or extends `src/components/ui.tsx`
-      before creating manual interaction logic
+      mobile/desktop layout separation, direct shadcn primitives, or CSS ownership
+- [ ] T0XX Confirm any standard UI primitive imports directly from its
+      shadcn-generated module under `src/components/ui/`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -163,8 +163,8 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
-- [ ] TXXX Verify no new styles were added to `src/index.css`; move feature
-      styles to component-specific CSS when needed
+- [ ] TXXX Verify no app-specific styles were added to `src/index.css`; move
+      feature styles to component-specific CSS when needed
 - [ ] TXXX Run `pnpm test`
 - [ ] TXXX Run `pnpm build`
 

@@ -1,6 +1,6 @@
 import { useMemo } from "react"
-import { Toaster } from "sonner"
-import { Button } from "../../components/ui"
+import { Button } from "@/components/ui/button"
+import { Toaster } from "@/components/ui/sonner"
 import { useIsMobile } from "../../lib/viewport"
 import { PersonSummaryDesktopView, PersonSummaryMobilePage } from "../person-summary/PersonSummary"
 import { decodeShareState } from "./decodeShare"

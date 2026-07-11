@@ -2,7 +2,7 @@ import { ArrowLeftIcon, ArrowLeftRightIcon, CalculatorIcon, ChevronDownIcon, Cop
 import { driver } from "driver.js"
 import type { DriveStep, Driver } from "driver.js"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { toast, Toaster } from "sonner"
+import { toast } from "sonner"
 import "driver.js/dist/driver.css"
 import "./desktop-fixes.css"
 import "./tutorial-demo.css"
@@ -29,7 +29,18 @@ import { nombreMovimiento, textoCategorias, textoMovimientos, textoResumenPerson
 import { isMobileViewport, useIsMobile } from "../lib/viewport"
 import { cloneTutorialState, getTutorialElement, getTutorialStepsConfig, hideTutorialForever, nextPaint, tutorialHidden } from "./tutorial"
 import type { MobileSection } from "./tutorial"
-import { Badge, Button, Checkbox, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, ScrollArea, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Toaster } from "@/components/ui/sonner"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { clearState, loadState, saveState } from "../lib/storage"
 import type { AppState, CategoriaGasto, Movimiento, Persona } from "../types"
 
@@ -683,7 +694,7 @@ function EditableApp() {
           <DialogTitle>¿Primera vez usando la app?</DialogTitle>
           <DialogDescription>Podés hacer un tutorial guiado para no perderte.</DialogDescription>
           <label className="tutorial-checkbox" htmlFor="hide-tutorial">
-            <Checkbox checked={hideTutorial} id="hide-tutorial" onCheckedChange={setHideTutorial} />
+            <Checkbox checked={hideTutorial} id="hide-tutorial" onCheckedChange={(checked) => setHideTutorial(checked === true)} />
             No mostrar más
           </label>
           <div className="dialog-actions">

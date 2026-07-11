@@ -1,5 +1,5 @@
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
-import { Button } from "../ui"
+import { Button } from "@/components/ui/button"
 
 export function PaginationControls({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (page: number) => void }) {
   return (

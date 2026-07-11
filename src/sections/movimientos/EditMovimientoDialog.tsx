@@ -1,6 +1,10 @@
 import { ChevronDownIcon } from "lucide-react"
 import { CategoriaIcon } from "../../components/shared/CategoryBadge"
-import { Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../../components/ui"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CATEGORIAS_GASTO } from "../../lib/categorias"
 import type { CategoriaGasto, Movimiento, Persona } from "../../types"
 

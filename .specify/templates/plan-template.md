@@ -46,12 +46,13 @@
       `number` arithmetic is introduced for money calculations.
 - [ ] Mobile and desktop behavior is planned as shared logic with separate
       layouts where interaction models differ.
-- [ ] Existing local shadcn/Radix wrappers in `src/components/ui.tsx` are reused
-      or extended before manual UI primitives are created.
+- [ ] Standard UI primitives are imported directly from shadcn-generated modules
+      under `src/components/ui/`; no local wrapper or barrel is introduced.
 - [ ] Shared `#/share/...` views remain read-only and do not write editable
       state.
-- [ ] New styles are scoped to component/feature CSS files or className
-      utilities; no new rules are added to `src/index.css`.
+- [ ] New app-specific styles are scoped to component/feature CSS files or
+      className utilities; `src/index.css` only receives shadcn theme/base
+      tokens when required.
 - [ ] Final verification includes `pnpm test` and `pnpm build`.
 
 ## Project Structure

@@ -1,15 +1,14 @@
 <!--
 Sync Impact Report
-Version change: template -> 1.0.0
+Version change: 1.0.0 -> 2.0.0
 Modified principles:
-- PRINCIPLE_1_NAME placeholder -> I. Monetary Logic Is Pure and Centralized
-- PRINCIPLE_2_NAME placeholder -> II. Decimal Money Only
-- PRINCIPLE_3_NAME placeholder -> III. Shared Logic, Separate Layouts
-- PRINCIPLE_4_NAME placeholder -> IV. shadcn/Radix First
-- PRINCIPLE_5_NAME placeholder -> V. Shared Views Are Read-Only
+- I. Monetary Logic Is Pure and Centralized -> unchanged
+- II. Decimal Money Only -> unchanged
+- III. Shared Logic, Separate Layouts -> unchanged
+- IV. shadcn/Radix First -> IV. shadcn Direct, No Local Wrappers
+- V. Shared Views Are Read-Only -> unchanged
 Added sections:
-- Project Constraints
-- Development Workflow and Quality Gates
+- None
 Removed sections:
 - None
 Templates requiring updates:
@@ -17,7 +16,7 @@ Templates requiring updates:
 - ✅ .specify/templates/spec-template.md
 - ✅ .specify/templates/tasks-template.md
 - ✅ .specify/templates/commands/*.md (directory absent)
-- ✅ README.md reviewed; not edited because runtime guidance already aligns and user did not request README changes
+- ✅ README.md not edited by request scope
 Follow-up TODOs:
 - None
 -->
@@ -54,15 +53,16 @@ flow, and mobile changes MUST NOT force desktop to reuse cramped mobile
 structure. Shared components are encouraged only when they do not duplicate
 state or hide divergent behavior behind confusing conditionals.
 
-### IV. shadcn/Radix First
+### IV. shadcn Direct, No Local Wrappers
 
-Before creating manual UI primitives, implementation MUST check existing local
-shadcn/Radix wrappers in `src/components/ui.tsx`. If a matching primitive
-exists, it MUST be reused. If a missing primitive is needed, the preferred path
-is to add or extend a local wrapper around the shadcn/Radix primitive before
-building custom interaction logic. Manual components are acceptable only for
-app-specific composition, not for reimplementing standard dialogs, sheets,
-tables, selects, scroll areas, accordions, badges, buttons, or tooltips.
+Standard UI primitives MUST come from shadcn-generated component files under
+`src/components/ui/` and MUST be imported directly from their component module,
+such as `@/components/ui/button` or `@/components/ui/dialog`. Barrel files or
+local wrappers that re-export, rename, or hide shadcn primitives are prohibited.
+App-specific composition remains allowed outside `src/components/ui/`, but it
+MUST compose direct shadcn primitives instead of wrapping them as replacements.
+Manual primitives are acceptable only when no shadcn component exists for that
+interaction.
 
 ### V. Shared Views Are Read-Only
 
@@ -81,10 +81,11 @@ shared flows stay separated.
   boundary in `src/lib/storage.ts`.
 - Categories, storage keys, share encoding, formatting helpers, and export
   helpers MUST stay centralized in `src/lib` or feature-local modules.
-- New styles MUST NOT be added to `src/index.css`. Component or feature changes
-  MUST use a specific CSS file imported by that component or use scoped
-  Tailwind/className utilities. `src/index.css` is reserved for theme variables,
-  base rules, and existing global primitives.
+- New app-specific styles MUST NOT be added to `src/index.css`. Component or
+  feature changes MUST use a specific CSS file imported by that component or
+  use scoped Tailwind/className utilities. `src/index.css` is reserved for
+  theme variables, base rules, existing global primitives, and shadcn-required
+  theme/base tokens.
 - Shared data models MUST remain minimal. Do not add fields that are not used by
   the app's current source data model.
 
@@ -93,8 +94,8 @@ shared flows stay separated.
 - Before large changes, inspect the relevant repo structure, component
   boundaries, calculation functions, storage, and CSS ownership.
 - Plans and tasks MUST explicitly state whether the work touches monetary
-  logic, mobile/desktop layout separation, shared read-only views, shadcn/Radix
-  primitives, or CSS ownership.
+  logic, mobile/desktop layout separation, shared read-only views, direct
+  shadcn primitives, or CSS ownership.
 - Monetary changes MUST update or add tests in the existing test path before
   final verification.
 - UI changes MUST preserve existing mobile and desktop behavior unless the
@@ -120,4 +121,4 @@ Compliance review is mandatory for every feature plan and implementation
 handoff. Violations MUST be documented in the plan's Complexity Tracking
 section with a concrete reason and rejected simpler alternative.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-11 | **Last Amended**: 2026-07-11
+**Version**: 2.0.0 | **Ratified**: 2026-07-11 | **Last Amended**: 2026-07-11

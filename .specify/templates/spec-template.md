@@ -106,10 +106,12 @@
   `decimal.js` or shared decimal helpers, not raw `number` arithmetic.
 - If the feature changes UI, specify expected mobile and desktop behavior
   separately while keeping shared data and business logic.
+- If the feature needs standard UI primitives, specify direct shadcn components
+  under `src/components/ui/` and do not require local wrappers or barrels.
 - If the feature touches shared links or `#/share/...`, specify that the shared
   view remains read-only.
 - If the feature needs new styling, specify the component or feature CSS owner;
-  do not direct changes to `src/index.css`.
+  do not direct app-specific changes to `src/index.css`.
 
 ### Key Entities *(include if feature involves data)*
 
