@@ -109,10 +109,11 @@ function PersonCarousel({ personas, selected, onSelect, renderItem, showArrows =
       {showArrows ? <CarouselNext className="btn-outline person-carousel-arrow" /> : null}
       {showPagination ? (
         <div className="person-carousel-pagination">
-          <span>{selectedIndex + 1} de {personas.length}</span>
+          <button aria-label="Persona anterior" disabled={!api?.canScrollPrev()} onClick={() => api?.scrollPrev()} type="button"><ChevronLeftIcon /></button>
           <div>
             {personas.map((persona, index) => <button aria-label={`Ver ${persona}`} className={index === selectedIndex ? "active" : ""} key={persona} onClick={() => { onSelect(persona); api?.scrollTo(index) }} type="button" />)}
           </div>
+          <button aria-label="Persona siguiente" disabled={!api?.canScrollNext()} onClick={() => api?.scrollNext()} type="button"><ChevronRightIcon /></button>
         </div>
       ) : null}
     </Carousel>
@@ -136,7 +137,11 @@ function SummaryStats({ resumen, onOpen, saldoClickable = false, showTransferBut
   const estado = estadoSaldo(resumen.saldo)
   return (
     <Card className="ps-stats">
-      <h2>Resumen de {resumen.persona} <Badge className={estado.className}>{estado.label}</Badge></h2>
+      <div className="ps-stats-person">
+        <PersonAvatar className="ps-stats-avatar" persona={resumen.persona} />
+        <h2><SlidingText>{resumen.persona}</SlidingText></h2>
+        <Badge className={estado.className}>{estado.label}</Badge>
+      </div>
       <div>
         <SummaryActionRow label="Le tocaba gastar" amount={formatoARS.format(resumen.totalLeTocaba)} onClick={onOpen ? () => onOpen("parte") : undefined} />
         <SummaryActionRow label="Gastó" amount={formatoARS.format(resumen.totalSalioBolsillo)} onClick={onOpen ? () => onOpen("gasto") : undefined} />
@@ -242,8 +247,23 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
         {onShare ? <Button className="btn-outline" onClick={() => onShare(selected)} type="button"><ShareIcon /></Button> : <span />}
       </header>
       <ScrollArea className="ps-mobile-scroll">
-        <PersonCarousel personas={personas} selected={selected} onSelect={setSelected} />
-        <SummaryStats resumen={resumen} showTransferButton onOpen={openDetail} />
+        <PersonCarousel
+          personas={personas}
+          selected={selected}
+          showArrows={false}
+          showPagination
+          onSelect={setSelected}
+          renderItem={(persona) => (
+            <SummaryStats
+              resumen={getResumenPersona(persona, movimientos)}
+              showTransferButton
+              onOpen={(view) => {
+                setSelected(persona)
+                openDetail(view)
+              }}
+            />
+          )}
+        />
         {detail !== "cards" ? <DetailList closing={closingDetail} pendientes={pendientesPersona} resumen={resumen} view={detail} onBack={closeDetail} /> : null}
       </ScrollArea>
     </main>
