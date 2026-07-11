@@ -137,7 +137,7 @@ function SummaryStats({ resumen, onOpen, saldoClickable = false, showTransferBut
         <SummaryActionRow label="Ya recibió" amount={formatoARS.format(resumen.totalRecibido)} onClick={onOpen ? () => onOpen("recibido") : undefined} />
         <SummaryActionRow label="Saldo" amount={formatoARS.format(resumen.saldo)} className={estado.className} onClick={saldoClickable && onOpen ? () => onOpen("transferencias") : undefined} />
       </div>
-      {showTransferButton && onOpen ? <Button className="btn-outline ps-transfer-button" onClick={() => onOpen("transferencias")} type="button">¿A quién le transfiere?</Button> : null}
+      {showTransferButton && onOpen ? <Button className="btn-outline ps-transfer-button" onClick={() => onOpen("transferencias")} type="button">{resumen.saldo > 0 ? "¿De quién recibe?" : "¿A quién le transfiere?"}</Button> : null}
     </Card>
   )
 }
