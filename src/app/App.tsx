@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Toaster } from "@/components/ui/sonner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -711,14 +712,14 @@ function EditableApp() {
       {isMobile ? (
         <>
           <Header onActionsClick={() => { setMobileActionsPanelAnimating(false); setMobileActionsView("menu"); setMobileActionsDirection("forward"); setMobileActionsOpen(true) }} />
-          <Dialog open={mobileActionsOpen} onOpenChange={(open) => { setMobileActionsOpen(open); if (!open) setMobileActionsView("menu") }}>
-            <DialogContent className="mobile-actions-drawer">
+          <Sheet open={mobileActionsOpen} onOpenChange={(open) => { setMobileActionsOpen(open); if (!open) setMobileActionsView("menu") }}>
+            <SheetContent className="mobile-actions-drawer" side="right">
               {mobileActionsView === "menu" ? (
                 <div className={`mobile-actions-panel ${mobileActionsPanelAnimating ? `panel-${mobileActionsDirection}` : ""}`} key="menu">
                   <div className="mobile-actions-head">
                     <button className="mobile-actions-back" onClick={() => setMobileActionsOpen(false)} type="button"><ArrowLeftIcon />Cerrar</button>
-                    <DialogTitle>Acciones</DialogTitle>
-                    <DialogDescription>Herramientas del reparto.</DialogDescription>
+                    <h2>Acciones</h2>
+                    <p>Herramientas del reparto.</p>
                   </div>
                   <div className="mobile-actions-list">
                     <button onClick={() => abrirAccionMobile("grafico")} type="button">
@@ -742,8 +743,8 @@ function EditableApp() {
                 <div className={`mobile-actions-panel ${mobileActionsPanelAnimating ? `panel-${mobileActionsDirection}` : ""}`} key="grafico">
                   <div className="mobile-actions-head">
                     <button className="mobile-actions-back" onClick={volverAccionesMobile} type="button"><ArrowLeftIcon />Volver</button>
-                    <DialogTitle>Gráfico</DialogTitle>
-                    <DialogDescription>Compará gastos por categoría.</DialogDescription>
+                    <h2>Gráfico</h2>
+                    <p>Compará gastos por categoría.</p>
                   </div>
                   <div className="category-chart-card">
                     <div className="category-chart-layout">
@@ -808,8 +809,8 @@ function EditableApp() {
                   </div>
                 </div>
               ) : null}
-            </DialogContent>
-          </Dialog>
+            </SheetContent>
+          </Sheet>
         </>
       ) : null}
 

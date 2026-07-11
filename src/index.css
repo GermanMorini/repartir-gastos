@@ -492,7 +492,8 @@ h2 {
   font-weight: 700;
 }
 
-.tabs-trigger[data-state="active"] {
+.tabs-trigger[data-state="active"],
+.tabs-trigger[data-active] {
   border-bottom-color: var(--primary);
   color: var(--primary);
 }
@@ -2565,7 +2566,8 @@ body {
   font-size: 1rem;
 }
 
-.tabs-trigger[data-state="active"] {
+.tabs-trigger[data-state="active"],
+.tabs-trigger[data-active] {
   border-bottom-color: var(--primary);
   color: var(--primary);
 }
@@ -2950,9 +2952,9 @@ body {
   }
 
   .desktop-form-stack .tabs-list {
-    margin: -1rem -1rem 1.35rem;
+    margin: 0 0 1rem;
     border: 1px solid var(--border);
-    border-radius: 8px 8px 0 0;
+    border-radius: 8px;
     overflow: hidden;
   }
 
@@ -4191,6 +4193,11 @@ body {
     border-radius: 0;
     padding: max(1rem, env(safe-area-inset-top)) 1rem calc(1rem + env(safe-area-inset-bottom));
     animation: drawer-from-right 180ms ease-out;
+  }
+
+  .mobile-actions-drawer {
+    display: flex;
+    flex-direction: column;
   }
 
   .mobile-actions-list {

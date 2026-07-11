@@ -4,11 +4,12 @@
     animation: mobile-actions-drawer-in 220ms ease-out !important;
   }
 
-  .mobile-actions-drawer > .dialog-close {
+  .mobile-actions-drawer > [data-slot="sheet-close"] {
     display: none;
   }
 
-  .mobile-actions-drawer[data-state="closed"] {
+  .mobile-actions-drawer[data-state="closed"],
+  .mobile-actions-drawer[data-closed] {
     animation: mobile-actions-drawer-out 180ms ease-in forwards !important;
   }
 
