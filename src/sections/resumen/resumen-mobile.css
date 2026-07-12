@@ -1,0 +1,53 @@
+@media (max-width: 719px) {
+  .summary-card.mobile-view.is-active {
+    display: flex;
+    min-height: 0;
+    max-height: calc(100dvh - 9.8rem - env(safe-area-inset-bottom));
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  .summary-card.mobile-view.is-active .summary-head {
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  .summary-card.mobile-view.is-active .summary-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: calc(var(--visible-items, 4) * 4.25rem);
+  }
+
+  .summary-card.mobile-view.is-active > .desktop-pagination {
+    flex: 0 0 auto;
+  }
+
+  .summary-card.mobile-view.is-active .summary-bottom-actions {
+    position: static;
+    z-index: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    flex: 0 0 auto;
+    width: 100%;
+    margin-top: 0.75rem;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    backdrop-filter: none;
+  }
+
+  .summary-card.mobile-view.is-active .summary-person {
+    min-height: 4.25rem;
+    padding-block: 0.68rem;
+  }
+
+  .summary-card.mobile-view.is-active .summary-balance span {
+    font-size: 1rem;
+  }
+
+  .summary-card.mobile-view.is-active .summary-balance small {
+    font-size: 0.78rem;
+  }
+}

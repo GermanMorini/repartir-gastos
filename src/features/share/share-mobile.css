@@ -34,7 +34,11 @@
   }
 
   .share-page .ps-mobile-page .ps-detail-list {
-    z-index: 100;
+    z-index: 120;
+  }
+
+  .share-page .ps-mobile-page:has(.ps-detail-list) .ps-mobile-head {
+    z-index: 1;
   }
 
   .share-page:has(.ps-detail-list) .share-back {

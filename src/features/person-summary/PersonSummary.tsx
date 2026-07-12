@@ -277,9 +277,9 @@ export function PersonSummaryMobilePage({ personas, movimientos, initialPersona,
             />
           )}
         />
-        {detail !== "cards" ? <DetailList closing={closingDetail} pendientes={pendientesPersona} resumen={resumen} view={detail} onBack={closeDetail} /> : null}
         {onBack && detail === "cards" ? <Button className="btn-outline ps-bottom-back ps-page-back" onClick={onBack} type="button"><ArrowLeftIcon />Volver</Button> : null}
       </ScrollArea>
+      {detail !== "cards" ? <DetailList closing={closingDetail} pendientes={pendientesPersona} resumen={resumen} view={detail} onBack={closeDetail} /> : null}
     </main>
   )
 }

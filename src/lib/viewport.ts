@@ -132,7 +132,8 @@ export function useAdaptivePageSize({
       const viewportBottom = metrics.height - Math.max(metrics.safeBottom, 0) - bottomReserve
       const availableHeight = Math.max(0, viewportBottom - listTop - followingHeight)
       const itemHeight = firstMeasuredItemHeight(list, itemSelector, fallbackItemHeight)
-      const nextPageSize = Math.max(min, Math.min(max, Math.floor(availableHeight / itemHeight)))
+      const measuredPageSize = Math.max(min, Math.floor(availableHeight / itemHeight) - 1)
+      const nextPageSize = Math.max(min, Math.min(max, measuredPageSize))
       list.style.setProperty("--adaptive-list-height", `${Math.max(itemHeight, availableHeight)}px`)
       list.style.setProperty("--adaptive-item-height", `${itemHeight}px`)
       setPageSize(Number.isFinite(nextPageSize) ? nextPageSize : min)

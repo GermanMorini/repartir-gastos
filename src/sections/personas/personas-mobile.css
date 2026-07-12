@@ -1,0 +1,22 @@
+@media (max-width: 719px) {
+  .people-section.mobile-view.is-active {
+    display: flex;
+    min-height: 0;
+    max-height: calc(100dvh - 9.8rem - env(safe-area-inset-bottom));
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .people-section.mobile-view.is-active .section-head,
+  .people-section.mobile-view.is-active .people-form,
+  .people-section.mobile-view.is-active .people-tutorial-hint,
+  .people-section.mobile-view.is-active .site-footer-inline,
+  .people-section.mobile-view.is-active > .desktop-pagination {
+    flex: 0 0 auto;
+  }
+
+  .people-section.mobile-view.is-active .person-chips {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}

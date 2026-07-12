@@ -45,7 +45,7 @@ export function PersonasSection({
     min: 1,
     max: 7,
     enabled: isMobile,
-    bottomReserve: 96,
+    bottomReserve: 24,
     deps: [personas.length, className],
   })
   const pageSize = isMobile ? adaptivePageSize : personas.length || 1

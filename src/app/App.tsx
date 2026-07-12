@@ -131,7 +131,7 @@ function EditableApp() {
     min: 1,
     max: 8,
     enabled: isMobile && activeSection === "movimientos",
-    bottomReserve: 96,
+    bottomReserve: 24,
     deps: [movimientosCard.length, activeSection],
   })
   const mobileMovementTotalPages = Math.max(1, Math.ceil(movimientosCard.length / mobileMovementPageSize))

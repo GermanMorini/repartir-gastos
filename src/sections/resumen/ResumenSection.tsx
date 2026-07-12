@@ -67,11 +67,11 @@ export function ResumenSection({
     containerRef: sectionRef,
     listRef,
     itemSelector: ".summary-person",
-    fallbackItemHeight: 80,
+    fallbackItemHeight: 68,
     min: 1,
     max: 7,
     enabled: isMobile,
-    bottomReserve: 185,
+    bottomReserve: 24,
     deps: [saldos.length, className],
   })
   const pageSize = isMobile ? adaptivePageSize : saldos.length || 1
