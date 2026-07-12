@@ -9,6 +9,8 @@ export type Movimiento =
       monto: number
       participantes: Persona[]
       categoria: CategoriaGasto
+      modoPago?: "pagador_unico" | "pago_multiple"
+      aportes?: Record<Persona, number>
     }
   | {
       tipo: "transferencia"

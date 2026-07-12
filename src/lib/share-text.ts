@@ -20,7 +20,7 @@ function resultadoCopiable(resumen: ResumenPersona) {
 export function textoResumenPersona(resumen: ResumenPersona) {
   const detalle = [
     ...resumen.gastosDondeParticipo.map(({ movimiento, montoParte }) => `- ${nombreMovimiento(movimiento)}: ${formatoARS.format(montoParte)} de ${formatoARS.format(movimiento.monto)}`),
-    ...resumen.gastosQuePago.map((movimiento) => `- ${nombreMovimiento(movimiento)}: puso ${formatoARS.format(movimiento.monto)}`),
+    ...resumen.gastosQuePago.map(({ movimiento, montoAportado }) => `- ${nombreMovimiento(movimiento)}: puso ${formatoARS.format(montoAportado)}`),
     ...resumen.transferenciasEnviadas.map((movimiento) => `- Pagó a ${movimiento.a}: ${formatoARS.format(movimiento.monto)}`),
     ...resumen.transferenciasRecibidas.map((movimiento) => `- Recibió de ${movimiento.de}: ${formatoARS.format(movimiento.monto)}`),
   ]
@@ -71,11 +71,16 @@ export function textoMovimientos(personas: Persona[], movimientos: Movimiento[])
   const inicialCopiada = (persona: Persona) => nombreCopiado(persona).slice(0, abreviaturas.get(persona))
   const bloques = personas
     .map((persona) => {
-      const propios = gastos.filter((movimiento) => movimiento.pagador === persona)
+      const propios = gastos.filter((movimiento) => movimiento.pagador === persona || ((movimiento.aportes?.[persona] ?? 0) > 0))
       if (propios.length === 0) return ""
       return [
         `${nombreCopiado(persona)}:`,
-        ...propios.map((movimiento) => `- \`${nombreMovimiento(movimiento)}\`: *${formatoARS.format(movimiento.monto)}* (entre ${movimiento.participantes.map(inicialCopiada).join(", ")})`),
+        ...propios.map((movimiento) => {
+          const aportes = movimiento.modoPago === "pago_multiple" && movimiento.aportes
+            ? `; aportes: ${Object.entries(movimiento.aportes).filter(([, monto]) => monto > 0).map(([persona, monto]) => `${inicialCopiada(persona)} ${formatoARS.format(monto)}`).join(", ")}`
+            : ""
+          return `- \`${nombreMovimiento(movimiento)}\`: *${formatoARS.format(movimiento.monto)}* (entre ${movimiento.participantes.map(inicialCopiada).join(", ")}${aportes})`
+        }),
       ].join("\n")
     })
     .filter(Boolean)

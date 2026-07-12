@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 
 type DesktopSection = "personas" | "movimientos" | "resumen"
@@ -236,6 +236,7 @@ export function DesktopWorkspace({
   }
 
   return (
+    <TooltipProvider>
     <div className="desktop-shell">
       <aside className="desktop-sidebar" data-tour="desktop-sidebar">
         <div className="desktop-brand">
@@ -392,5 +393,6 @@ export function DesktopWorkspace({
       </main>
       {desktopSection === "resumen" ? <div className="desktop-tour-resumen-target" data-tour="desktop-resumen" /> : null}
     </div>
+    </TooltipProvider>
   )
 }

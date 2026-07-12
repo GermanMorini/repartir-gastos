@@ -176,7 +176,7 @@ function DetailRows({ resumen, view, pendientes }: { resumen: ResumenPersona; vi
   )
   if (view === "gasto") return (
     <>
-      {resumen.gastosQuePago.map((movimiento, index) => <p className="ps-part-row" key={`gasto-${index}`}><span className="ps-row-icon"><CategoriaIcon categoria={movimiento.categoria} /></span><span><strong>{nombreMovimiento(movimiento)}</strong></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}
+      {resumen.gastosQuePago.map(({ movimiento, montoAportado }, index) => <p className="ps-part-row" key={`gasto-${index}`}><span className="ps-row-icon"><CategoriaIcon categoria={movimiento.categoria} /></span><span><strong>{nombreMovimiento(movimiento)}</strong></span><b>{formatoARS.format(montoAportado)}</b></p>)}
       {resumen.transferenciasEnviadas.map((movimiento, index) => <p className="ps-part-row" key={`transferido-${index}`}><span className="ps-row-icon ps-transfer-icon"><ArrowUpRightIcon /></span><span><strong>A {movimiento.a}</strong><small>Pago realizado</small></span><b>{formatoARS.format(movimiento.monto)}</b></p>)}
     </>
   )
