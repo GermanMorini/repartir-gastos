@@ -27,7 +27,7 @@ import { CATEGORIAS_GASTO, CATEGORIA_DEFAULT, getCategoriaOrden } from "../lib/c
 import { descargarImagen, toPngDataUrl } from "../lib/export-image"
 import { formatoARS, formatoSaldoMatriz, porcentaje } from "../lib/money"
 import { nombreMovimiento, textoCategorias, textoMovimientos, textoResumenPersona } from "../lib/share-text"
-import { isMobileViewport, useIsMobile } from "../lib/viewport"
+import { isMobileViewport, useAdaptivePageSize, useIsMobile } from "../lib/viewport"
 import { cloneTutorialState, getTutorialElement, getTutorialStepsConfig, hideTutorialForever, nextPaint, tutorialHidden } from "./tutorial"
 import type { MobileSection } from "./tutorial"
 import { Badge } from "@/components/ui/badge"
@@ -50,31 +50,6 @@ const sinSeleccion = ""
 const mobileSectionOrder: MobileSection[] = ["personas", "movimientos", "resumen"]
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
 type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
-
-function useMobileVisibleRows() {
-  const calculate = () => {
-    const height = typeof window === "undefined" ? 720 : window.innerHeight
-    const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
-    return {
-      personas: clamp(Math.floor((height - 360) / 80), 2, 7),
-      resumen: clamp(Math.floor((height - 330) / 80), 2, 7),
-      movimientos: clamp(Math.floor((height - 325) / 66), 2, 8),
-    }
-  }
-  const [rows, setRows] = useState(calculate)
-
-  useEffect(() => {
-    const update = () => setRows(calculate())
-    window.addEventListener("resize", update)
-    window.visualViewport?.addEventListener("resize", update)
-    return () => {
-      window.removeEventListener("resize", update)
-      window.visualViewport?.removeEventListener("resize", update)
-    }
-  }, [])
-
-  return rows
-}
 
 export default function App() {
   const [hash, setHash] = useState(() => window.location.hash)
@@ -102,7 +77,7 @@ function EditableApp() {
   const [mobileMovementPage, setMobileMovementPage] = useState(1)
   const [mobileMovementPageDirection, setMobileMovementPageDirection] = useState<"next" | "prev">("next")
   const [mobileMovementPageAnimating, setMobileMovementPageAnimating] = useState(false)
-  const mobileVisibleRows = useMobileVisibleRows()
+  const isMobile = useIsMobile()
   const [sectionDirection, setSectionDirection] = useState<"forward" | "back">("forward")
   const [sectionAnimating, setSectionAnimating] = useState(false)
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
@@ -120,6 +95,8 @@ function EditableApp() {
   const [demoActiveTarget, setDemoActiveTarget] = useState<string | null>(null)
   const exportCategoriasRef = useRef<HTMLDivElement | null>(null)
   const calculosRef = useRef<HTMLDivElement | null>(null)
+  const movementSectionRef = useRef<HTMLElement | null>(null)
+  const movementListRef = useRef<HTMLDivElement | null>(null)
   const tutorialDriverRef = useRef<Driver | null>(null)
   const tutorialPreviousStateRef = useRef<AppState | null>(null)
   const tutorialCompletedDemosRef = useRef<Set<string>>(new Set())
@@ -146,7 +123,17 @@ function EditableApp() {
     [movimientos],
   )
   const saldos = useMemo(() => calcularSaldos(personas, movimientos), [personas, movimientos])
-  const mobileMovementPageSize = mobileVisibleRows.movimientos
+  const mobileMovementPageSize = useAdaptivePageSize({
+    containerRef: movementSectionRef,
+    listRef: movementListRef,
+    itemSelector: ".movement-row",
+    fallbackItemHeight: 66,
+    min: 1,
+    max: 8,
+    enabled: isMobile && activeSection === "movimientos",
+    bottomReserve: 96,
+    deps: [movimientosCard.length, activeSection],
+  })
   const mobileMovementTotalPages = Math.max(1, Math.ceil(movimientosCard.length / mobileMovementPageSize))
   const currentMobileMovementPage = Math.min(mobileMovementPage, mobileMovementTotalPages)
   const mobileMovimientos = movimientosCard.slice((currentMobileMovementPage - 1) * mobileMovementPageSize, currentMobileMovementPage * mobileMovementPageSize)
@@ -175,7 +162,6 @@ function EditableApp() {
   const resumenCopiable = pendientes.length
     ? `Esto es lo que debe cada uno:\n${pendientes.map((t) => `- ${t.de} transfiere ${formatoARS.format(t.monto)} a ${t.a}`).join("\n")}\n\n${firmaResumen}`
     : `Esto es lo que debe cada uno:\nLas cuentas ya están equilibradas.\n\n${firmaResumen}`
-  const isMobile = useIsMobile()
   const Layout = MobileLayout
 
   function irASeccion(seccion: MobileSection) {
@@ -858,7 +844,6 @@ function EditableApp() {
               onDelete={borrarPersona}
               onStartTutorial={() => void iniciarTutorialConMockup()}
               suppressListAnimation={sectionAnimating}
-              mobilePageSize={mobileVisibleRows.personas}
             />
           ) : null}
 
@@ -1016,7 +1001,7 @@ function EditableApp() {
             </Sheet>
           </section> : null}
 
-          {mostrarSeccion("movimientos") ? <section className={`app-section movements-section ${vistaMobile("movimientos")}`}>
+          {mostrarSeccion("movimientos") ? <section className={`app-section movements-section ${vistaMobile("movimientos")}`} ref={movementSectionRef}>
             <div className="section-head">
               <h2>Listado</h2>
             </div>
@@ -1024,7 +1009,7 @@ function EditableApp() {
               <span className="hint-mobile">Tocá en un movimiento para editarlo.</span>
               <span className="hint-desktop">Clickeá en un movimiento para editarlo.</span>
             </p>
-            <div className={`movement-list ${mobileMovementPageAnimating && !sectionAnimating ? `page-slide-${mobileMovementPageDirection}` : ""}`} key={currentMobileMovementPage} style={{ "--visible-items": mobileMovementPageSize } as CSSProperties}>
+            <div className={`movement-list ${mobileMovementPageAnimating && !sectionAnimating ? `page-slide-${mobileMovementPageDirection}` : ""}`} key={currentMobileMovementPage} ref={movementListRef} style={{ "--visible-items": mobileMovementPageSize } as CSSProperties}>
               {movimientos.length === 0 ? <Badge className="empty-state-badge">Sin movimientos</Badge> : null}
               {movimientos.length > 0 ? mobileMovimientos.map(({ movimiento, index }) => (
                 <MovimientoItem
@@ -1190,7 +1175,6 @@ function EditableApp() {
               saldos={saldos}
               settlementOpen={settlementOpen}
               suppressListAnimation={sectionAnimating}
-              mobilePageSize={mobileVisibleRows.resumen}
               totalGastado={totalGastado}
             />
           ) : null}

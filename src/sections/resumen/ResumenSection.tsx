@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { FilaCalculo, Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "../../types"
-import { useIsMobile } from "../../lib/viewport"
+import { useAdaptivePageSize, useIsMobile } from "../../lib/viewport"
 import { RepartirDialog } from "../total/RepartirDialog"
 import { CalculosDialog } from "./CalculosDialog"
 import { PersonaResumenItem } from "./PersonaResumenItem"
@@ -35,7 +35,6 @@ type ResumenSectionProps = {
   resumenCopiable?: string
   onShareReparto?: () => void
   suppressListAnimation?: boolean
-  mobilePageSize?: number
 }
 
 export function ResumenSection({
@@ -56,14 +55,26 @@ export function ResumenSection({
   resumenCopiable = "",
   onShareReparto = () => undefined,
   suppressListAnimation = false,
-  mobilePageSize,
 }: ResumenSectionProps) {
   const isMobile = useIsMobile()
+  const sectionRef = useRef<HTMLDivElement | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
   const [page, setPage] = useState(1)
   const [pageDirection, setPageDirection] = useState<"next" | "prev">("next")
   const [pageAnimating, setPageAnimating] = useState(false)
   const pageAnimationTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
-  const pageSize = isMobile ? Math.max(1, mobilePageSize ?? 4) : saldos.length || 1
+  const adaptivePageSize = useAdaptivePageSize({
+    containerRef: sectionRef,
+    listRef,
+    itemSelector: ".summary-person",
+    fallbackItemHeight: 80,
+    min: 1,
+    max: 7,
+    enabled: isMobile,
+    bottomReserve: 185,
+    deps: [saldos.length, className],
+  })
+  const pageSize = isMobile ? adaptivePageSize : saldos.length || 1
   const totalPages = Math.max(1, Math.ceil(saldos.length / pageSize))
   const currentPage = Math.min(page, totalPages)
   const visibleSaldos = saldos.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -80,7 +91,7 @@ export function ResumenSection({
   }, [])
 
   return (
-    <Card className={`summary-card ${className}`} id="resumen" data-tour="resumen">
+    <Card className={`summary-card ${className}`} id="resumen" data-tour="resumen" ref={sectionRef}>
       <div className="summary-head">
         <div className="section-title section-title-summary">
           <span className="section-icon"><UsersIcon /></span>
@@ -98,7 +109,7 @@ export function ResumenSection({
           ) : null}
         </div>
       </div>
-      <div className={`summary-list ${pageAnimating && !suppressListAnimation ? `page-slide-${pageDirection}` : ""}`} key={currentPage} style={{ "--visible-items": pageSize } as CSSProperties}>
+      <div className={`summary-list ${pageAnimating && !suppressListAnimation ? `page-slide-${pageDirection}` : ""}`} key={currentPage} ref={listRef} style={{ "--visible-items": pageSize } as CSSProperties}>
         {saldos.length === 0 ? <Badge className="empty-state-badge">Sin saldos</Badge> : null}
         {visibleSaldos.map((saldo) => (
           <PersonaResumenItem key={saldo.persona} onClick={() => onResumenOpenPersonaChange(saldo.persona)} persona={saldo.persona} saldo={saldo.saldo} />

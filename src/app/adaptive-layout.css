@@ -1,0 +1,177 @@
+@media (max-width: 719px) {
+  .app-shell,
+  .mobile-layout,
+  .mobile-main,
+  .app-section,
+  .mobile-view.is-active {
+    min-height: 0;
+  }
+
+  .person-chips,
+  .summary-list,
+  .movements-section .movement-list {
+    max-height: min(var(--adaptive-list-height, 100%), 52dvh);
+  }
+
+  .summary-card {
+    padding-bottom: calc(14rem + env(safe-area-inset-bottom));
+  }
+
+  .summary-bottom-actions {
+    max-height: calc(100dvh - 7rem);
+  }
+
+  .ps-mobile-page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ps-mobile-scroll {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ps-mobile-scroll .scroll-area-viewport {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .ps-mobile-page .ps-detail-list {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ps-mobile-page .ps-detail-scroll {
+    min-height: 0;
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 719px) and (max-height: 720px) {
+  .app-header {
+    padding-block: max(0.6rem, env(safe-area-inset-top)) 0.55rem;
+  }
+
+  .app-header h1 {
+    font-size: 1.55rem;
+  }
+
+  .section-head,
+  .summary-head {
+    margin-bottom: 0.75rem;
+  }
+
+  .section-title h2,
+  .summary-title h2 {
+    font-size: 1.22rem;
+  }
+
+  .section-title p,
+  .summary-title p {
+    font-size: 0.86rem;
+  }
+
+  .people-form,
+  .movement-list-actions,
+  .mobile-tutorial-hint,
+  .mobile-github-footer {
+    margin-top: 0.65rem;
+  }
+
+  .person-chip,
+  .summary-person {
+    min-height: 4.55rem;
+    padding-block: 0.75rem;
+  }
+
+  .person-chips,
+  .summary-list {
+    height: calc(var(--visible-items, 4) * 4.55rem);
+  }
+
+  .movements-section .movement-row {
+    min-height: 3.85rem;
+    max-height: 3.85rem;
+  }
+
+  .movements-section .movement-list {
+    height: calc(var(--visible-items, 3) * 3.85rem);
+  }
+
+  .summary-card {
+    padding-bottom: calc(12.25rem + env(safe-area-inset-bottom));
+  }
+
+  .summary-bottom-actions {
+    gap: 0.5rem;
+    padding-block: 0.45rem;
+  }
+
+  .summary-bottom-actions .btn {
+    min-height: 2.45rem;
+    font-size: 0.9rem;
+  }
+
+  .summary-bottom-actions .settle-button {
+    min-height: 3.05rem;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 719px) and (max-height: 620px) {
+  .app-header {
+    padding-block: max(0.45rem, env(safe-area-inset-top)) 0.45rem;
+  }
+
+  .app-logo {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .app-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .app-section {
+    padding-top: 0.65rem;
+  }
+
+  .section-head,
+  .summary-head {
+    margin-bottom: 0.55rem;
+  }
+
+  .person-chip,
+  .summary-person {
+    min-height: 4.1rem;
+    padding-block: 0.6rem;
+  }
+
+  .person-chips,
+  .summary-list {
+    height: calc(var(--visible-items, 4) * 4.1rem);
+  }
+
+  .movements-section .movement-row {
+    min-height: 3.55rem;
+    max-height: 3.55rem;
+  }
+
+  .movements-section .movement-list {
+    height: calc(var(--visible-items, 3) * 3.55rem);
+  }
+
+  .summary-card {
+    padding-bottom: calc(11.3rem + env(safe-area-inset-bottom));
+  }
+
+  .summary-bottom-actions .settle-button {
+    min-height: 2.8rem;
+  }
+}
+
+@media (min-width: 720px) {
+  .desktop-participants-tooltip-portal {
+    z-index: 10000 !important;
+  }
+}
