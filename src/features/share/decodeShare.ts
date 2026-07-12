@@ -14,22 +14,12 @@ function isPersona(value: unknown): value is Persona {
   return typeof value === "string" && value.trim().length > 0
 }
 
-function cleanAportes(aportes: unknown, personas: Persona[]) {
-  if (!aportes || typeof aportes !== "object") return {}
-  const existentes = new Set(personas)
-  return Object.fromEntries(
-    Object.entries(aportes as Record<string, unknown>)
-      .filter(([persona, monto]) => existentes.has(persona) && typeof monto === "number" && Number.isFinite(monto) && monto >= 0),
-  ) as Record<Persona, number>
-}
-
-function cleanMovimiento(value: unknown, personas: Persona[]): Movimiento | null {
+function cleanMovimiento(value: unknown): Movimiento | null {
   if (!value || typeof value !== "object") return null
   const movimiento = value as Partial<Movimiento>
   if (typeof movimiento.monto !== "number" || !Number.isFinite(movimiento.monto) || movimiento.monto <= 0) return null
   if (movimiento.tipo === "gasto") {
     if (!isPersona(movimiento.pagador) || !Array.isArray(movimiento.participantes) || !movimiento.participantes.every(isPersona)) return null
-    const modoPago = movimiento.modoPago === "pago_multiple" ? "pago_multiple" : "pagador_unico"
     return {
       tipo: "gasto",
       ...(typeof movimiento.descripcion === "string" ? { descripcion: movimiento.descripcion } : {}),
@@ -37,8 +27,6 @@ function cleanMovimiento(value: unknown, personas: Persona[]): Movimiento | null
       monto: movimiento.monto,
       participantes: movimiento.participantes,
       categoria: categorias.has(movimiento.categoria as CategoriaGasto) ? movimiento.categoria as CategoriaGasto : CATEGORIA_DEFAULT,
-      ...(modoPago === "pago_multiple" ? { aportes: cleanAportes(movimiento.aportes, personas) } : {}),
-      ...(modoPago === "pago_multiple" ? { modoPago } : {}),
     }
   }
   if (movimiento.tipo === "transferencia") {
@@ -60,7 +48,7 @@ export function decodeShareState(payload: string): AppState {
     const data = JSON.parse(json) as Partial<SharePayloadV1>
     if (data.v !== 1 || !Array.isArray(data.personas) || !Array.isArray(data.movimientos)) throw new Error("invalid")
     const personas = data.personas.filter(isPersona)
-    const movimientos = data.movimientos.map((movimiento) => cleanMovimiento(movimiento, personas)).filter((movimiento): movimiento is Movimiento => Boolean(movimiento))
+    const movimientos = data.movimientos.map(cleanMovimiento).filter((movimiento): movimiento is Movimiento => Boolean(movimiento))
     if (personas.length === 0) throw new Error("invalid")
     return { personas, movimientos }
   } catch {

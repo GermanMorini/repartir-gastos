@@ -1,12 +1,12 @@
+import { ChevronDownIcon } from "lucide-react"
 import { CategoriaIcon } from "../../components/shared/CategoryBadge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { CATEGORIAS_GASTO } from "../../lib/categorias"
 import type { CategoriaGasto, Movimiento, Persona } from "../../types"
-import { ParticipantsSelector } from "./ParticipantsSelector"
 
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
 type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
@@ -20,7 +20,7 @@ export function EditMovimientoDialog({
   onChange,
   onEditarGasto,
   onEditarTransferencia,
-  onEditarAporte,
+  onEditarParticipante,
 }: {
   edicion: EdicionMovimiento
   personas: Persona[]
@@ -29,7 +29,7 @@ export function EditMovimientoDialog({
   onChange: (edicion: Exclude<EdicionMovimiento, null> | null) => void
   onEditarGasto: (cambios: Partial<Gasto>) => void
   onEditarTransferencia: (cambios: Partial<Transferencia>) => void
-  onEditarAporte: (persona: Persona, monto: string) => void
+  onEditarParticipante: (persona: Persona, checked: boolean) => void
 }) {
   return (
     <Dialog open={edicion !== null} onOpenChange={(open) => !open && onClose()}>
@@ -47,13 +47,6 @@ export function EditMovimientoDialog({
           </label>
           {edicion?.movimiento.tipo === "gasto" ? (
             <>
-              <div className="edit-field edit-payment-mode-row">
-                <span>Modo</span>
-                <label className="payment-mode-switch">
-                  <Switch checked={(edicion.movimiento.modoPago ?? "pagador_unico") === "pago_multiple"} onCheckedChange={(checked) => onEditarGasto({ modoPago: checked ? "pago_multiple" : "pagador_unico" })} />
-                  Pagado entre varios
-                </label>
-              </div>
               <div className="edit-field">
                 <span>Pagó</span>
                 <Select value={edicion.movimiento.pagador} onValueChange={(pagador) => onEditarGasto({ pagador })}>
@@ -79,14 +72,29 @@ export function EditMovimientoDialog({
               </div>
               <div className="edit-field">
                 <span>Participantes</span>
-                <ParticipantsSelector
-                  aportes={Object.fromEntries(Object.entries(edicion.movimiento.aportes ?? {}).map(([persona, monto]) => [persona, String(monto)]))}
-                  multiplePayment={(edicion.movimiento.modoPago ?? "pagador_unico") === "pago_multiple"}
-                  onAporteChange={onEditarAporte}
-                  onParticipantesChange={(participantes) => onEditarGasto({ participantes })}
-                  participantes={edicion.movimiento.participantes}
-                  personas={personas}
-                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="select-like" type="button">
+                      {edicion.movimiento.participantes.length === 0 ? "Participantes" : edicion.movimiento.participantes.length === personas.length ? "Todos" : `${edicion.movimiento.participantes.length} seleccionados`}
+                      <ChevronDownIcon data-icon="inline-end" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="participants-menu edit-participants-menu">
+                    <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+                    <DropdownMenuSeparator className="dropdown-separator" />
+                    <DropdownMenuGroup>
+                      {personas.map((persona) => (
+                        <DropdownMenuCheckboxItem checked={edicion.movimiento.tipo === "gasto" && edicion.movimiento.participantes.includes(persona)} key={persona} onCheckedChange={(checked) => onEditarParticipante(persona, checked)}>
+                          {persona}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator className="dropdown-separator" />
+                    <Button className="menu-action" onClick={() => edicion.movimiento.tipo === "gasto" && onEditarGasto({ participantes: edicion.movimiento.participantes.length === personas.length ? [] : personas })} type="button">
+                      {edicion.movimiento.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                    </Button>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </>
           ) : null}

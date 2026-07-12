@@ -34,41 +34,11 @@ type SaldoInterno = Omit<SaldoPersona, "saldo" | "totalPagadoEnGastos" | "totalD
 
 const decimal = (monto: Decimal.Value) => new Decimal(monto)
 const redondearMoneda = (monto: Decimal.Value) => decimal(monto).toDecimalPlaces(2).toNumber()
-const modoPago = (movimiento: Extract<Movimiento, { tipo: "gasto" }>) => movimiento.modoPago ?? "pagador_unico"
 
 /** Devuelve la parte de un gasto que corresponde a una persona. */
 function parteGasto(movimiento: Extract<Movimiento, { tipo: "gasto" }>, persona: Persona) {
   if (!movimiento.participantes.includes(persona) || movimiento.participantes.length === 0) return decimal(0)
-  return totalLiquidableGasto(movimiento).div(movimiento.participantes.length)
-}
-
-function aportesDeclaradosGasto(movimiento: Extract<Movimiento, { tipo: "gasto" }>): Array<[Persona, Decimal]> {
-  return Object.entries(movimiento.aportes ?? {})
-    .map(([persona, monto]) => [persona, decimal(monto)] as [Persona, Decimal])
-    .filter(([, monto]) => monto.gt(0))
-}
-
-function totalAportesDeclaradosGasto(movimiento: Extract<Movimiento, { tipo: "gasto" }>) {
-  return aportesDeclaradosGasto(movimiento).reduce((total, [, aporte]) => total.plus(aporte), decimal(0))
-}
-
-function totalLiquidableGasto(movimiento: Extract<Movimiento, { tipo: "gasto" }>) {
-  if (modoPago(movimiento) !== "pago_multiple") return decimal(movimiento.monto)
-  return Decimal.max(decimal(movimiento.monto), totalAportesDeclaradosGasto(movimiento))
-}
-
-function aportesGasto(movimiento: Extract<Movimiento, { tipo: "gasto" }>): Array<[Persona, Decimal]> {
-  if (modoPago(movimiento) !== "pago_multiple") return [[movimiento.pagador, decimal(movimiento.monto)]] as Array<[Persona, Decimal]>
-  const aportes = aportesDeclaradosGasto(movimiento)
-  const faltante = decimal(movimiento.monto).minus(totalAportesDeclaradosGasto(movimiento))
-  if (faltante.lte(0)) return aportes
-  const index = aportes.findIndex(([persona]) => persona === movimiento.pagador)
-  if (index >= 0) {
-    const next = [...aportes]
-    next[index] = [next[index][0], next[index][1].plus(faltante)]
-    return next
-  }
-  return [[movimiento.pagador, faltante], ...aportes]
+  return decimal(movimiento.monto).div(movimiento.participantes.length)
 }
 
 /**
@@ -84,10 +54,8 @@ function aportesGasto(movimiento: Extract<Movimiento, { tipo: "gasto" }>): Array
  */
 function aplicarMovimiento(movimiento: Movimiento, existe: (persona: Persona) => boolean, aplicar: (persona: Persona, monto: Decimal) => void) {
   if (movimiento.tipo === "gasto") {
-    if (movimiento.participantes.length === 0) return
-    for (const [persona, aporte] of aportesGasto(movimiento)) {
-      if (existe(persona)) aplicar(persona, aporte)
-    }
+    if (!existe(movimiento.pagador) || movimiento.participantes.length === 0) return
+    aplicar(movimiento.pagador, decimal(movimiento.monto))
     for (const persona of movimiento.participantes) {
       if (existe(persona)) aplicar(persona, decimal(movimiento.monto).div(movimiento.participantes.length).neg())
     }
@@ -133,13 +101,12 @@ export function calcularSaldos(personas: Persona[], movimientos: Movimiento[]): 
 
   for (const movimiento of movimientos) {
     if (movimiento.tipo === "gasto") {
-      if (movimiento.participantes.length === 0) continue
+      const pagador = saldos.get(movimiento.pagador)
+      if (!pagador || movimiento.participantes.length === 0) continue
 
-      // Cada aportante puso dinero para saldar este gasto.
-      for (const [persona, aporte] of aportesGasto(movimiento)) {
-        const saldo = saldos.get(persona)
-        if (saldo) saldo.totalPagadoEnGastos = saldo.totalPagadoEnGastos.plus(aporte)
-      }
+      // El pagador puso el total del gasto desde su bolsillo.
+      const monto = movimiento.monto
+      pagador.totalPagadoEnGastos = pagador.totalPagadoEnGastos.plus(monto)
 
       // Cada participante debe solo su parte de este gasto.
       for (const persona of movimiento.participantes) {
@@ -238,7 +205,7 @@ export function getMatrizCalculos(personas: Persona[], movimientos: Movimiento[]
       (persona) => saldos.has(persona),
       (persona, monto) => saldos.set(persona, (saldos.get(persona) ?? decimal(0)).plus(monto)),
     )
-    filas.push(fila(index + 1, textoMovimientoCalculo(movimiento), movimiento.monto, movimiento.tipo === "gasto" ? (aportesGasto(movimiento)[0]?.[0] ?? movimiento.pagador) : movimiento.de))
+    filas.push(fila(index + 1, textoMovimientoCalculo(movimiento), movimiento.monto, movimiento.tipo === "gasto" ? movimiento.pagador : movimiento.de))
   })
 
   return filas
@@ -278,7 +245,7 @@ export function getGastosPorCategoria(movimientos: Movimiento[]): ResumenCategor
  * gastos que pagó, pagos enviados y pagos recibidos.
  */
 export function getResumenPersona(persona: Persona, movimientos: Movimiento[]) {
-  const personas = Array.from(new Set([persona, ...movimientos.flatMap((movimiento) => (movimiento.tipo === "gasto" ? [movimiento.pagador, ...movimiento.participantes, ...Object.keys(movimiento.aportes ?? {})] : [movimiento.de, movimiento.a]))]))
+  const personas = Array.from(new Set([persona, ...movimientos.flatMap((movimiento) => (movimiento.tipo === "gasto" ? [movimiento.pagador, ...movimiento.participantes] : [movimiento.de, movimiento.a]))]))
   const saldo = calcularSaldos(personas, movimientos).find((item) => item.persona === persona)
   const totalPuesto = saldo?.totalPagadoEnGastos ?? 0
   const totalLeTocaba = saldo?.totalDebidoEnGastos ?? 0
@@ -289,9 +256,7 @@ export function getResumenPersona(persona: Persona, movimientos: Movimiento[]) {
   const gastosDondeParticipo = movimientos
     .filter((movimiento): movimiento is Extract<Movimiento, { tipo: "gasto" }> => movimiento.tipo === "gasto" && movimiento.participantes.includes(persona))
     .map((movimiento) => ({ movimiento, montoParte: redondearMoneda(parteGasto(movimiento, persona)) }))
-  const gastosQuePago = movimientos
-    .filter((movimiento): movimiento is Extract<Movimiento, { tipo: "gasto" }> => movimiento.tipo === "gasto" && aportesGasto(movimiento).some(([aportante]) => aportante === persona))
-    .map((movimiento) => ({ movimiento, montoAportado: redondearMoneda(aportesGasto(movimiento).find(([aportante]) => aportante === persona)?.[1] ?? 0) }))
+  const gastosQuePago = movimientos.filter((movimiento): movimiento is Extract<Movimiento, { tipo: "gasto" }> => movimiento.tipo === "gasto" && movimiento.pagador === persona)
   const transferenciasEnviadas = movimientos.filter((movimiento): movimiento is Extract<Movimiento, { tipo: "transferencia" }> => movimiento.tipo === "transferencia" && movimiento.de === persona)
   const transferenciasRecibidas = movimientos.filter((movimiento): movimiento is Extract<Movimiento, { tipo: "transferencia" }> => movimiento.tipo === "transferencia" && movimiento.a === persona)
 

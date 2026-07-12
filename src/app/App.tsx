@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowLeftRightIcon, CalculatorIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, ShredderIcon } from "lucide-react"
+import { ArrowLeftIcon, ArrowLeftRightIcon, CalculatorIcon, ChevronDownIcon, CopyIcon, DownloadIcon, PieChartIcon, PlusIcon, ReceiptTextIcon, ShareIcon, ShredderIcon } from "lucide-react"
 import { driver } from "driver.js"
 import type { DriveStep, Driver } from "driver.js"
 import type { CSSProperties } from "react"
@@ -18,7 +18,6 @@ import { PersonSummaryMobilePage } from "../features/person-summary/PersonSummar
 import { SharePage } from "../features/share/SharePage"
 import { encodeShareState } from "../features/share/encodeShare"
 import { EditMovimientoDialog } from "../sections/movimientos/EditMovimientoDialog"
-import { ParticipantsSelector } from "../sections/movimientos/ParticipantsSelector"
 import { PersonasSection } from "../sections/personas/PersonasSection"
 import { MovimientoItem } from "../sections/movimientos/MovimientoItem"
 import { ResumenSection } from "../sections/resumen/ResumenSection"
@@ -35,12 +34,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Switch } from "@/components/ui/switch"
 import { Toaster } from "@/components/ui/sonner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -51,27 +50,6 @@ const sinSeleccion = ""
 const mobileSectionOrder: MobileSection[] = ["personas", "movimientos", "resumen"]
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
 type Transferencia = Extract<Movimiento, { tipo: "transferencia" }>
-type ModoPagoGasto = NonNullable<Gasto["modoPago"]>
-type GastoFormState = {
-  descripcion: string
-  pagador: Persona
-  monto: string
-  participantes: Persona[]
-  categoria: CategoriaGasto
-  modoPago: ModoPagoGasto
-  aportes: Record<Persona, string>
-}
-
-const nuevoGastoForm = (overrides: Partial<GastoFormState> = {}): GastoFormState => ({
-  descripcion: "",
-  pagador: sinSeleccion,
-  monto: "",
-  participantes: [],
-  categoria: CATEGORIA_DEFAULT,
-  modoPago: "pagador_unico",
-  aportes: {},
-  ...overrides,
-})
 
 export default function App() {
   const [hash, setHash] = useState(() => window.location.hash)
@@ -90,7 +68,7 @@ function EditableApp() {
   const [personas, setPersonas] = useState<Persona[]>(() => loadState().personas)
   const [movimientos, setMovimientos] = useState<Movimiento[]>(() => loadState().movimientos)
   const [nombre, setNombre] = useState("")
-  const [gasto, setGasto] = useState<GastoFormState>(() => nuevoGastoForm())
+  const [gasto, setGasto] = useState({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [] as Persona[], categoria: CATEGORIA_DEFAULT })
   const [transferencia, setTransferencia] = useState({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   const [edicion, setEdicion] = useState<{ index: number; movimiento: Movimiento; monto: string } | null>(null)
   const [activeSection, setActiveSection] = useState<MobileSection>("personas")
@@ -162,7 +140,7 @@ function EditableApp() {
   const matrizCalculos = useMemo(() => getMatrizCalculos(personas, movimientosCard.map((item) => item.movimiento)), [personas, movimientosCard])
   const gastosPorCategoria = useMemo(() => getGastosPorCategoria(movimientos), [movimientos])
   const pendientes = useMemo(() => calcularTransferenciasPendientes(saldos), [saldos])
-  const totalGastado = movimientos.reduce((total, movimiento) => total + (movimiento.tipo === "gasto" ? movimiento.monto : 0), 0)
+  const totalGastado = saldos.reduce((total, saldo) => total + saldo.totalPagadoEnGastos, 0)
   const promedio = personas.length ? totalGastado / personas.length : 0
 
   function abrirResumenPersona(persona: Persona | null) {
@@ -280,18 +258,18 @@ function EditableApp() {
     for (const movimiento of state.movimientos) {
       if (movimiento.tipo === "gasto") {
         setMovementTab("gasto")
-        setGasto(nuevoGastoForm())
+        setGasto({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [], categoria: CATEGORIA_DEFAULT })
         await nextPaint()
         await typeInto((value) => setGasto((actual) => ({ ...actual, descripcion: value })), movimiento.descripcion ?? "", 60)
         setGasto((actual) => ({ ...actual, monto: String(movimiento.monto) }))
         await sleep(450)
         setGasto((actual) => ({ ...actual, pagador: movimiento.pagador }))
         await sleep(450)
-        setGasto((actual) => ({ ...actual, participantes: [...movimiento.participantes], categoria: movimiento.categoria, modoPago: movimiento.modoPago ?? "pagador_unico", aportes: Object.fromEntries(Object.entries(movimiento.aportes ?? {}).map(([persona, monto]) => [persona, String(monto)])) }))
+        setGasto((actual) => ({ ...actual, participantes: [...movimiento.participantes], categoria: movimiento.categoria }))
         await sleep(520)
         await flashDemoTarget("add-expense-button")
-        setMovimientos((actuales) => [...actuales, { ...movimiento, participantes: [...movimiento.participantes], aportes: { ...(movimiento.aportes ?? {}) } }])
-        setGasto(nuevoGastoForm({ pagador: movimiento.pagador, participantes: state.personas, categoria: movimiento.categoria }))
+        setMovimientos((actuales) => [...actuales, { ...movimiento, participantes: [...movimiento.participantes] }])
+        setGasto({ descripcion: "", pagador: movimiento.pagador, monto: "", participantes: state.personas, categoria: movimiento.categoria })
         await sleep(420)
         continue
       }
@@ -436,13 +414,13 @@ function EditableApp() {
 
   async function iniciarTutorialConMockup() {
     tutorialPreviousStateRef.current = { personas: [...personas], movimientos: movimientos.map((movimiento) => (
-      movimiento.tipo === "gasto" ? { ...movimiento, participantes: [...movimiento.participantes], aportes: { ...(movimiento.aportes ?? {}) } } : { ...movimiento }
+      movimiento.tipo === "gasto" ? { ...movimiento, participantes: [...movimiento.participantes] } : { ...movimiento }
     )) }
     const emptyState: AppState = { personas: [], movimientos: [] }
     saveState(emptyState)
     setPersonas([])
     setMovimientos([])
-    setGasto(nuevoGastoForm())
+    setGasto({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [], categoria: CATEGORIA_DEFAULT })
     setTransferencia({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
     setMovementTab("gasto")
     tutorialCompletedDemosRef.current = new Set()
@@ -475,42 +453,18 @@ function EditableApp() {
     setMovimientos(
       movimientos
         .filter((movimiento) => (movimiento.tipo === "gasto" ? movimiento.pagador !== persona : movimiento.de !== persona && movimiento.a !== persona))
-        .map((movimiento) => (movimiento.tipo === "gasto" ? { ...movimiento, participantes: movimiento.participantes.filter((item) => item !== persona), aportes: Object.fromEntries(Object.entries(movimiento.aportes ?? {}).filter(([aportante]) => aportante !== persona)) } : movimiento))
+        .map((movimiento) => (movimiento.tipo === "gasto" ? { ...movimiento, participantes: movimiento.participantes.filter((item) => item !== persona) } : movimiento))
         .filter((movimiento) => movimiento.tipo === "transferencia" || movimiento.participantes.length > 0),
     )
   }
 
-  function parseAportes(aportes: Record<Persona, string | number>) {
-    return Object.fromEntries(
-      Object.entries(aportes)
-        .map(([persona, monto]) => [persona, Number(monto)] as const)
-        .filter(([persona, monto]) => personas.includes(persona) && Number.isFinite(monto)),
-    )
-  }
-
-  function primerAportante(aportes: Record<Persona, number>) {
-    return Object.entries(aportes).find(([, monto]) => monto > 0)?.[0] ?? sinSeleccion
-  }
-
-  function validarGastoMultiple(aportes: Record<Persona, number>) {
-    if (Object.values(aportes).some((monto) => !Number.isFinite(monto) || monto < 0)) return "Los aportes no pueden ser negativos."
-    if (!Object.values(aportes).some((monto) => monto > 0)) return "Cargá al menos un aporte."
-    return ""
-  }
-
   function agregarGasto() {
     const monto = Number(gasto.monto)
+    if (!gasto.pagador) return toast.error("Elegí quién pagó.")
     if (!Number.isFinite(monto) || monto <= 0) return toast.error("El monto debe ser positivo.")
     if (gasto.participantes.length === 0) return toast.error("Elegí al menos un participante.")
-    const aportes = parseAportes(gasto.aportes)
-    if (gasto.modoPago === "pago_multiple") {
-      const error = validarGastoMultiple(aportes)
-      if (error) return toast.error(error)
-    }
-    const pagador = gasto.modoPago === "pago_multiple" ? (gasto.pagador || primerAportante(aportes) || gasto.participantes[0]) : gasto.pagador
-    if (!pagador) return toast.error("Elegí quién pagó.")
-    setMovimientos([...movimientos, { tipo: "gasto", descripcion: gasto.descripcion.trim(), pagador, monto, participantes: gasto.participantes, categoria: gasto.categoria, modoPago: gasto.modoPago, ...(gasto.modoPago === "pago_multiple" ? { aportes } : {}) }])
-    setGasto(nuevoGastoForm({ pagador: gasto.pagador, participantes: personas, categoria: gasto.categoria, modoPago: gasto.modoPago }))
+    setMovimientos([...movimientos, { tipo: "gasto", descripcion: gasto.descripcion.trim(), pagador: gasto.pagador, monto, participantes: gasto.participantes, categoria: gasto.categoria }])
+    setGasto({ descripcion: "", pagador: gasto.pagador, monto: "", participantes: personas, categoria: gasto.categoria })
   }
 
   function agregarTransferencia() {
@@ -526,7 +480,7 @@ function EditableApp() {
     clearState()
     setPersonas([])
     setMovimientos([])
-    setGasto(nuevoGastoForm())
+    setGasto({ descripcion: "", pagador: sinSeleccion, monto: "", participantes: [], categoria: CATEGORIA_DEFAULT })
     setTransferencia({ descripcion: "", de: sinSeleccion, a: sinSeleccion, monto: "" })
   }
 
@@ -650,7 +604,7 @@ function EditableApp() {
       index,
       monto: String(movimiento.monto),
       movimiento: movimiento.tipo === "gasto"
-        ? { ...movimiento, descripcion: nombreMovimiento(movimiento), participantes: [...movimiento.participantes], aportes: { ...(movimiento.aportes ?? {}) } }
+        ? { ...movimiento, descripcion: nombreMovimiento(movimiento), participantes: [...movimiento.participantes] }
         : { ...movimiento, descripcion: nombreMovimiento(movimiento) },
     })
   }
@@ -662,15 +616,8 @@ function EditableApp() {
     if (!nombreEditado) return toast.error("El nombre no puede estar vacío.")
     if (!Number.isFinite(monto) || monto <= 0) return toast.error("El monto debe ser positivo.")
     if (edicion.movimiento.tipo === "gasto" && edicion.movimiento.participantes.length === 0) return toast.error("Elegí al menos un participante.")
-    let movimientoEditado: Movimiento = edicion.movimiento
-    if (edicion.movimiento.tipo === "gasto" && (edicion.movimiento.modoPago ?? "pagador_unico") === "pago_multiple") {
-      const aportes = parseAportes(edicion.movimiento.aportes ?? {})
-      const error = validarGastoMultiple(aportes)
-      if (error) return toast.error(error)
-      movimientoEditado = { ...edicion.movimiento, aportes, pagador: edicion.movimiento.pagador || primerAportante(aportes) || edicion.movimiento.participantes[0] }
-    }
     if (edicion.movimiento.tipo === "transferencia" && edicion.movimiento.de === edicion.movimiento.a) return toast.error("Origen y destino deben ser distintos.")
-    setMovimientos(movimientos.map((movimiento, index) => (index === edicion.index ? { ...movimientoEditado, descripcion: nombreEditado, monto } : movimiento)))
+    setMovimientos(movimientos.map((movimiento, index) => (index === edicion.index ? { ...edicion.movimiento, descripcion: nombreEditado, monto } : movimiento)))
     setEdicion(null)
   }
 
@@ -684,27 +631,17 @@ function EditableApp() {
     setEdicion({ ...edicion, movimiento: { ...edicion.movimiento, ...cambios } })
   }
 
-  function editarAporte(persona: Persona, monto: string) {
+  function editarParticipante(persona: Persona, checked: boolean) {
     if (edicion?.movimiento.tipo !== "gasto") return
-    editarGasto({ aportes: { ...(edicion.movimiento.aportes ?? {}), [persona]: Number(monto) || 0 } })
-  }
-
-  function setGastoAporte(persona: Persona, monto: string) {
-    setGasto((actual) => ({ ...actual, aportes: { ...actual.aportes, [persona]: monto } }))
+    editarGasto({ participantes: checked ? [...edicion.movimiento.participantes, persona] : edicion.movimiento.participantes.filter((item) => item !== persona) })
   }
 
   const copiarMovimientos = () => navigator.clipboard.writeText(textoMovimientos(personas, movimientos)).then(() => toast.success("Movimientos copiados."))
   const gastoFormDesktop = (
     <div className="desktop-mini-form desktop-expense-form">
       <Input placeholder="Descripción (ej: cena, hotel, nafta...)" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
-      <div className="desktop-form-split payment-mode-row">
-        <Input inputMode="decimal" min="0" placeholder="$  0,00" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
-        <label className="payment-mode-switch">
-          <Switch checked={gasto.modoPago === "pago_multiple"} onCheckedChange={(checked) => setGasto({ ...gasto, modoPago: checked ? "pago_multiple" : "pagador_unico" })} />
-          Pagado entre varios
-        </label>
-      </div>
       <div className="desktop-form-split">
+        <Input inputMode="decimal" min="0" placeholder="$  0,00" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
         <Select value={gasto.categoria} onValueChange={(categoria) => setGasto({ ...gasto, categoria: categoria as CategoriaGasto })}>
           <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
           <SelectContent><SelectGroup>{CATEGORIAS_GASTO.map((categoria) => <SelectItem key={categoria.key} value={categoria.key}><CategoriaIcon categoria={categoria.key} />{categoria.label}</SelectItem>)}</SelectGroup></SelectContent>
@@ -715,16 +652,35 @@ function EditableApp() {
         <SelectContent><SelectGroup>{personas.map((persona) => <SelectItem key={persona} value={persona}>{persona}</SelectItem>)}</SelectGroup></SelectContent>
       </Select>
       <div className="desktop-participants-row">
-        <ParticipantsSelector
-          aportes={gasto.aportes}
-          multiplePayment={gasto.modoPago === "pago_multiple"}
-          onAporteChange={setGastoAporte}
-          onParticipantesChange={(participantes) => setGasto({ ...gasto, participantes })}
-          participantes={gasto.participantes}
-          personas={personas}
-        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="select-like" type="button">
+              {gasto.participantes.length === 0 ? "Seleccionar participantes" : gasto.participantes.length === personas.length ? "Todos" : `${gasto.participantes.length} seleccionados`}
+              <ChevronDownIcon data-icon="inline-end" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="participants-menu">
+            <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+            <DropdownMenuSeparator className="dropdown-separator" />
+            <DropdownMenuGroup>
+              {personas.map((persona) => (
+                <DropdownMenuCheckboxItem
+                  checked={gasto.participantes.includes(persona)}
+                  key={persona}
+                  onCheckedChange={(checked) => setGasto({ ...gasto, participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona) })}
+                >
+                  {persona}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="dropdown-separator" />
+            <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: gasto.participantes.length === personas.length ? [] : personas })} type="button">
+              {gasto.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
+            </Button>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <p className="desktop-split-note"><ReceiptTextIcon data-icon="inline-start" />{gasto.modoPago === "pago_multiple" ? "El gasto se reparte entre participantes; los aportes indican quién puso dinero para pagarlo." : "Se dividirá el gasto en partes iguales entre los participantes seleccionados."}</p>
+      <p className="desktop-split-note"><ReceiptTextIcon data-icon="inline-start" />Se dividirá el gasto en partes iguales entre los participantes seleccionados.</p>
       <Button className="add-movement" onClick={agregarGasto} type="button"><PlusIcon data-icon="inline-start" />Añadir gasto</Button>
     </div>
   )
@@ -928,13 +884,9 @@ function EditableApp() {
                     <label>
                       <Input placeholder="Descripción (cena, hotel, ...)" value={gasto.descripcion} onChange={(event) => setGasto({ ...gasto, descripcion: event.target.value })} />
                     </label>
-                    <div className="payment-mode-row">
+                    <label>
                       <Input inputMode="decimal" min="0" placeholder="Total" type="number" value={gasto.monto} onChange={(event) => setGasto({ ...gasto, monto: event.target.value })} />
-                      <label className="payment-mode-switch">
-                        <Switch checked={gasto.modoPago === "pago_multiple"} onCheckedChange={(checked) => setGasto({ ...gasto, modoPago: checked ? "pago_multiple" : "pagador_unico" })} />
-                        Pagado entre varios
-                      </label>
-                    </div>
+                    </label>
                     <div className="mobile-two-fields">
                       <label>
                         <Select value={gasto.pagador} onValueChange={(pagador) => setGasto({ ...gasto, pagador })}>
@@ -949,17 +901,40 @@ function EditableApp() {
                         </Select>
                       </label>
                       <label>
-                        <ParticipantsSelector
-                          aportes={gasto.aportes}
-                          multiplePayment={gasto.modoPago === "pago_multiple"}
-                          onAporteChange={setGastoAporte}
-                          onParticipantesChange={(participantes) => setGasto({ ...gasto, participantes })}
-                          participantes={gasto.participantes}
-                          personas={personas}
-                        />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button className="select-like" type="button">
+                              {gasto.participantes.length === 0 ? "Participantes" : gasto.participantes.length === personas.length ? "Todos" : `${gasto.participantes.length} seleccionados`}
+                              <ChevronDownIcon data-icon="inline-end" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="participants-menu">
+                            <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="dropdown-separator" />
+                            <DropdownMenuGroup>
+                              {personas.map((persona) => (
+                                <DropdownMenuCheckboxItem
+                                  checked={gasto.participantes.includes(persona)}
+                                  key={persona}
+                                  onCheckedChange={(checked) =>
+                                    setGasto({
+                                      ...gasto,
+                                      participantes: checked ? [...gasto.participantes, persona] : gasto.participantes.filter((item) => item !== persona),
+                                    })
+                                  }
+                                >
+                                  {persona}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuGroup>
+                            <DropdownMenuSeparator className="dropdown-separator" />
+                            <Button className="menu-action" onClick={() => setGasto({ ...gasto, participantes: gasto.participantes.length === personas.length ? [] : personas })} type="button">
+                              {gasto.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                            </Button>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </label>
                     </div>
-                    {gasto.modoPago === "pago_multiple" ? <p className="payment-mode-note">El gasto se reparte entre participantes; los aportes indican quién puso dinero para pagarlo.</p> : null}
                     <div className="add-expense-row">
                       <Select value={gasto.categoria} onValueChange={(categoria) => setGasto({ ...gasto, categoria: categoria as CategoriaGasto })}>
                         <SelectTrigger>
@@ -1069,13 +1044,6 @@ function EditableApp() {
                   </label>
                   {edicion?.movimiento.tipo === "gasto" ? (
                     <>
-                      <div className="edit-field edit-payment-mode-row">
-                        <span>Modo</span>
-                        <label className="payment-mode-switch">
-                          <Switch checked={(edicion.movimiento.modoPago ?? "pagador_unico") === "pago_multiple"} onCheckedChange={(checked) => editarGasto({ modoPago: checked ? "pago_multiple" : "pagador_unico" })} />
-                          Pagado entre varios
-                        </label>
-                      </div>
                       <div className="edit-field">
                         <span>Pagó</span>
                         <Select value={edicion.movimiento.pagador} onValueChange={(pagador) => editarGasto({ pagador })}>
@@ -1109,14 +1077,33 @@ function EditableApp() {
                       </div>
                       <div className="edit-field">
                         <span>Participantes</span>
-                        <ParticipantsSelector
-                          aportes={Object.fromEntries(Object.entries(edicion.movimiento.aportes ?? {}).map(([persona, monto]) => [persona, String(monto)]))}
-                          multiplePayment={(edicion.movimiento.modoPago ?? "pagador_unico") === "pago_multiple"}
-                          onAporteChange={editarAporte}
-                          onParticipantesChange={(participantes) => editarGasto({ participantes })}
-                          participantes={edicion.movimiento.participantes}
-                          personas={personas}
-                        />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button className="select-like" type="button">
+                              {edicion.movimiento.participantes.length === 0 ? "Participantes" : edicion.movimiento.participantes.length === personas.length ? "Todos" : `${edicion.movimiento.participantes.length} seleccionados`}
+                              <ChevronDownIcon data-icon="inline-end" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="participants-menu edit-participants-menu">
+                            <DropdownMenuLabel>Participantes</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="dropdown-separator" />
+                            <DropdownMenuGroup>
+                              {personas.map((persona) => (
+                                <DropdownMenuCheckboxItem
+                                  checked={edicion.movimiento.tipo === "gasto" && edicion.movimiento.participantes.includes(persona)}
+                                  key={persona}
+                                  onCheckedChange={(checked) => editarParticipante(persona, checked)}
+                                >
+                                  {persona}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuGroup>
+                            <DropdownMenuSeparator className="dropdown-separator" />
+                            <Button className="menu-action" onClick={() => edicion.movimiento.tipo === "gasto" && editarGasto({ participantes: edicion.movimiento.participantes.length === personas.length ? [] : personas })} type="button">
+                              {edicion.movimiento.participantes.length === personas.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                            </Button>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </>
                   ) : null}
@@ -1226,8 +1213,8 @@ function EditableApp() {
             edicion={edicion}
             onChange={setEdicion}
             onClose={() => setEdicion(null)}
-            onEditarAporte={editarAporte}
             onEditarGasto={editarGasto}
+            onEditarParticipante={editarParticipante}
             onEditarTransferencia={editarTransferencia}
             onSubmit={aceptarEdicion}
             personas={personas}

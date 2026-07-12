@@ -150,62 +150,6 @@ const payloadShare = (data: unknown) => btoa(Array.from(gzipSync(strToU8(JSON.st
 }
 
 {
-  const personas = ["A", "B", "C", "D"]
-  const movimientos: Movimiento[] = [
-    { tipo: "gasto", pagador: "A", monto: 10000, categoria: "comida", participantes: personas, modoPago: "pago_multiple", aportes: { A: 5000, B: 3000, C: 2000, D: 0 } },
-  ]
-  const saldos = calcularSaldos(personas, movimientos)
-  const resumenA = getResumenPersona("A", movimientos)
-
-  assert.deepEqual(
-    saldos.map(({ persona, saldo }) => ({ persona, saldo })),
-    [
-      { persona: "A", saldo: 2500 },
-      { persona: "B", saldo: 500 },
-      { persona: "C", saldo: -500 },
-      { persona: "D", saldo: -2500 },
-    ],
-  )
-  assert.deepEqual(calcularTransferenciasPendientes(saldos), [
-    { de: "C", a: "A", monto: 500 },
-    { de: "D", a: "A", monto: 2000 },
-    { de: "D", a: "B", monto: 500 },
-  ])
-  assert.equal(resumenA.totalPuesto, 5000)
-  assert.equal(resumenA.totalLeTocaba, 2500)
-  assert.equal(resumenA.gastosQuePago[0]?.montoAportado, 5000)
-}
-
-{
-  const personas = ["A", "B", "C"]
-  const movimientos: Movimiento[] = [
-    { tipo: "gasto", pagador: "C", monto: 10000, categoria: "comida", participantes: ["A", "B"], modoPago: "pago_multiple", aportes: { C: 12000 } },
-  ]
-  const saldos = calcularSaldos(personas, movimientos)
-
-  assert.deepEqual(
-    saldos.map(({ persona, saldo }) => ({ persona, saldo })),
-    [
-      { persona: "A", saldo: -6000 },
-      { persona: "B", saldo: -6000 },
-      { persona: "C", saldo: 12000 },
-    ],
-  )
-  assert.deepEqual(calcularTransferenciasPendientes(saldos), [
-    { de: "A", a: "C", monto: 6000 },
-    { de: "B", a: "C", monto: 6000 },
-  ])
-}
-
-{
-  const state: AppState = {
-    personas: ["A", "B", "C"],
-    movimientos: [{ tipo: "gasto", pagador: "C", monto: 10000, categoria: "comida", participantes: ["A", "B"], modoPago: "pago_multiple", aportes: { C: 12000 } }],
-  }
-  assert.deepEqual(decodeShareState(encodeShareState(state)), state)
-}
-
-{
   const personas = ["german", "carlos", "flecha"]
   const movimientos: Movimiento[] = [
     { tipo: "gasto", descripcion: "cena fruta + super", pagador: "german", monto: 40800, categoria: "comida", participantes: ["german", "carlos"] },

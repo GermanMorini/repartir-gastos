@@ -1,0 +1,20 @@
+@media (max-width: 719px) {
+  .mobile-movement-editor-sheet {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: min(88dvh, 42rem);
+    max-height: 88dvh;
+    border-radius: 20px 20px 0 0;
+    overflow: auto;
+    animation: movement-editor-sheet-in 180ms ease-out;
+  }
+}
+
+@keyframes movement-editor-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
