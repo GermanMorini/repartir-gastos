@@ -3303,6 +3303,22 @@ body {
     white-space: normal;
   }
 
+  .desktop-participants-tooltip-portal {
+    z-index: 9999;
+    max-width: min(26rem, 60vw);
+    border: 1px solid rgb(15 23 42 / 0.12);
+    border-radius: 0.7rem;
+    background: #111827;
+    color: #fff;
+    box-shadow: 0 18px 40px rgb(15 23 42 / 0.2);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+    padding: 0.65rem 0.8rem;
+    text-align: center;
+    white-space: normal;
+  }
+
   .desktop-participants-tooltip:hover .desktop-participants-tooltip-content,
   .desktop-participants-tooltip:focus-within .desktop-participants-tooltip-content {
     opacity: 1;

@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 
 type DesktopSection = "personas" | "movimientos" | "resumen"
@@ -82,13 +83,17 @@ function MovementParticipants({ participantes }: { participantes: Persona[] }) {
   const restantes = participantes.length - visibles.length
   const participantesTexto = participantes.join(", ")
   return (
-    <span className="desktop-participants-tooltip" aria-label={`Participantes: ${participantesTexto}`}>
-      <span className="desktop-participant-dots">
-        {visibles.map((persona) => <span className="avatar" key={persona}>{persona[0]?.toUpperCase()}</span>)}
-        {restantes > 0 ? <small>+{restantes}</small> : null}
-      </span>
-      <span className="desktop-participants-tooltip-content" role="tooltip">{participantesTexto}</span>
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="desktop-participants-tooltip" aria-label={`Participantes: ${participantesTexto}`}>
+          <span className="desktop-participant-dots">
+            {visibles.map((persona) => <span className="avatar" key={persona}>{persona[0]?.toUpperCase()}</span>)}
+            {restantes > 0 ? <small>+{restantes}</small> : null}
+          </span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="desktop-participants-tooltip-portal" side="top">{participantesTexto}</TooltipContent>
+    </Tooltip>
   )
 }
 

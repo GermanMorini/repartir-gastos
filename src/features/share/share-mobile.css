@@ -14,10 +14,17 @@
       url("/fondo.png") center / cover no-repeat;
   }
 
+  .share-page .ps-mobile-head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+
   .share-page .ps-mobile-scroll {
     min-height: 0;
     overflow: visible;
-    padding-bottom: calc(1rem + 5.5rem);
+    padding-top: 0.75rem;
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
   }
 
   .share-page .ps-mobile-scroll .scroll-area-viewport {

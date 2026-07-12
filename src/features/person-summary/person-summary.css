@@ -559,6 +559,16 @@
   justify-content: center;
 }
 
+.ps-mobile-page .ps-page-back {
+  position: fixed;
+  z-index: 6;
+  right: 1rem;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: 1rem;
+  width: auto;
+  margin: 0;
+}
+
 .ps-mobile-page .ps-detail-list header {
   grid-template-columns: 1fr;
   align-items: start;
@@ -601,6 +611,95 @@
 .ps-mobile-page .ps-detail-scroll .scroll-area-viewport::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: #cbd5e1;
+}
+
+@media (max-width: 719px) and (max-height: 760px) {
+  .ps-mobile-head {
+    min-height: 3.6rem;
+    padding: max(0.55rem, env(safe-area-inset-top)) 0.85rem 0.55rem;
+  }
+
+  .ps-mobile-head h1 {
+    font-size: 1rem;
+  }
+
+  .ps-mobile-scroll {
+    padding: 0.65rem 0.85rem 4.5rem;
+  }
+
+  .ps-mobile-page .ps-stats {
+    border-radius: 18px;
+    padding: 1rem;
+  }
+
+  .ps-stats-person {
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .ps-stats-avatar {
+    width: 4.4rem;
+    height: 4.4rem;
+    font-size: 2rem;
+  }
+
+  .ps-stats h2 {
+    font-size: 1.45rem;
+  }
+
+  .ps-mobile-page .ps-stat-row {
+    gap: 0.5rem;
+    padding-top: 0.65rem;
+    font-size: 0.98rem;
+  }
+
+  .ps-mobile-page .ps-stats strong {
+    font-size: 1.05rem;
+  }
+
+  .ps-transfer-button {
+    min-height: 2.55rem;
+    margin-top: 0.75rem;
+    font-size: 0.92rem;
+  }
+
+  .person-carousel-pagination {
+    gap: 0.55rem;
+  }
+
+  .person-carousel-pagination > div {
+    min-height: 2.2rem;
+  }
+
+  .person-carousel-pagination > button {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+}
+
+@media (max-width: 719px) and (max-height: 660px) {
+  .ps-mobile-scroll {
+    padding-inline: 0.65rem;
+  }
+
+  .ps-mobile-page .ps-stats {
+    padding: 0.8rem;
+  }
+
+  .ps-stats-avatar {
+    width: 3.7rem;
+    height: 3.7rem;
+    font-size: 1.65rem;
+  }
+
+  .ps-stats h2 {
+    font-size: 1.25rem;
+  }
+
+  .ps-mobile-page .ps-stat-row {
+    padding-top: 0.55rem;
+    font-size: 0.9rem;
+  }
 }
 
 .positive {
