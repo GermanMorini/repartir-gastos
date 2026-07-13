@@ -1,5 +1,5 @@
-import { formatoARS } from "./money"
-import type { Movimiento, Persona, ResumenCategoria } from "../types"
+import { formatoARS } from "./money.ts"
+import type { Movimiento, Persona, ResumenCategoria, TransferenciaPendiente } from "../types"
 import type { getResumenPersona } from "./calculos"
 
 type Gasto = Extract<Movimiento, { tipo: "gasto" }>
@@ -17,13 +17,18 @@ function resultadoCopiable(resumen: ResumenPersona) {
   return "está al día"
 }
 
-export function textoResumenPersona(resumen: ResumenPersona) {
+export function textoResumenPersona(resumen: ResumenPersona, pendientes: TransferenciaPendiente[] = []) {
   const detalle = [
     ...resumen.gastosDondeParticipo.map(({ movimiento, montoParte }) => `- ${nombreMovimiento(movimiento)}: ${formatoARS.format(montoParte)} de ${formatoARS.format(movimiento.monto)}`),
     ...resumen.gastosQuePago.map((movimiento) => `- ${nombreMovimiento(movimiento)}: puso ${formatoARS.format(movimiento.monto)}`),
     ...resumen.transferenciasEnviadas.map((movimiento) => `- Pagó a ${movimiento.a}: ${formatoARS.format(movimiento.monto)}`),
     ...resumen.transferenciasRecibidas.map((movimiento) => `- Recibió de ${movimiento.de}: ${formatoARS.format(movimiento.monto)}`),
   ]
+  const transferenciasPendientes = pendientes.flatMap((transferencia) => {
+    if (transferencia.de === resumen.persona) return [`- Debe transferir a ${transferencia.a}: ${formatoARS.format(transferencia.monto)}`]
+    if (transferencia.a === resumen.persona) return [`- Debe recibir de ${transferencia.de}: ${formatoARS.format(transferencia.monto)}`]
+    return []
+  })
 
   return [
     `Hoja de liquidación de ${resumen.persona}:`,
@@ -31,6 +36,7 @@ export function textoResumenPersona(resumen: ResumenPersona) {
     `- Ya pagó: ${formatoARS.format(resumen.totalSalioBolsillo)}`,
     `- Recibió: ${formatoARS.format(resumen.totalRecibido)}`,
     `- Saldo: ${resultadoCopiable(resumen)}`,
+    ...(transferenciasPendientes.length ? ["", "Transferencias pendientes:", ...transferenciasPendientes] : []),
     ...(detalle.length ? ["", "Detalle:", ...detalle] : []),
   ].join("\n")
 }
@@ -86,4 +92,11 @@ export function textoMovimientos(personas: Persona[], movimientos: Movimiento[])
     ...bloques.flatMap((bloque) => [bloque, ""]),
     ...(transferencias.length ? ["TRANSFERENCIAS:", ...transferencias.map((movimiento) => `- *${formatoARS.format(movimiento.monto)}* (de ${nombreCopiado(movimiento.de)} a ${nombreCopiado(movimiento.a)})`)] : []),
   ].join("\n").trim()
+}
+
+export function textoReparto(pendientes: TransferenciaPendiente[]) {
+  const signature = "💲 Resumen hecho con https://germanmorini.github.io/repartir-gastos/"
+  return pendientes.length
+    ? `Esto es lo que debe cada uno:\n${pendientes.map((transferencia) => `- ${transferencia.de} transfiere ${formatoARS.format(transferencia.monto)} a ${transferencia.a}`).join("\n")}\n\n${signature}`
+    : `Esto es lo que debe cada uno:\nLas cuentas ya están equilibradas.\n\n${signature}`
 }

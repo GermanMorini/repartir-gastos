@@ -36,7 +36,6 @@ export function RepartirDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   pendientes: TransferenciaPendiente[]
-  resumenCopiable: string
   onShare: () => void
 }) {
   return (

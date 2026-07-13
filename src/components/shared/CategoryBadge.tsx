@@ -2,6 +2,7 @@ import type { CSSProperties } from "react"
 import type { CategoriaGasto } from "../../types"
 import { getCategoria } from "../../lib/categorias"
 import { Badge } from "@/components/ui/badge"
+import "./category-badge.css"
 
 export function CategoriaIcon({ categoria }: { categoria: CategoriaGasto }) {
   const meta = getCategoria(categoria)

@@ -18,6 +18,30 @@ export type Movimiento =
       monto: number
     }
 
+export type GastoMovimiento = Extract<Movimiento, { tipo: "gasto" }>
+export type TransferenciaMovimiento = Extract<Movimiento, { tipo: "transferencia" }>
+
+export type GastoFormState = {
+  descripcion: string
+  pagador: Persona
+  monto: string
+  participantes: Persona[]
+  categoria: CategoriaGasto
+}
+
+export type TransferenciaFormState = {
+  descripcion: string
+  de: Persona
+  a: Persona
+  monto: string
+}
+
+export type MovementEditState = {
+  index: number
+  movimiento: Movimiento
+  monto: string
+}
+
 export type SaldoPersona = {
   persona: Persona
   saldo: number

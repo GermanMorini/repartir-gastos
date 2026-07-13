@@ -1,4 +1,5 @@
 import type { AppState } from "../types"
+import { normalizeAppState } from "../domain/state/normalize"
 
 const KEY = "repartir-gastos:v1"
 const initialState: AppState = { personas: [], movimientos: [] }
@@ -6,20 +7,20 @@ const initialState: AppState = { personas: [], movimientos: [] }
 export function loadState(): AppState {
   try {
     const data = localStorage.getItem(KEY)
-    const state: AppState = data ? { ...initialState, ...JSON.parse(data) } : initialState
-    return {
-      ...state,
-      movimientos: state.movimientos.map((movimiento) => (
-        movimiento.tipo === "gasto" ? { ...movimiento, categoria: movimiento.categoria ?? "otros" } : movimiento
-      )),
-    }
+    return data ? normalizeAppState(JSON.parse(data)) : initialState
   } catch {
     return initialState
   }
 }
 
 export function saveState(state: AppState) {
-  localStorage.setItem(KEY, JSON.stringify(state))
+  try {
+    localStorage.setItem(KEY, JSON.stringify(state))
+    return true
+  } catch (error) {
+    console.error("No se pudo guardar el estado.", error)
+    return false
+  }
 }
 
 export function clearState() {

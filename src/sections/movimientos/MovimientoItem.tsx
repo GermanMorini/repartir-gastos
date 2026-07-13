@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react"
 import { Trash2Icon } from "lucide-react"
 import { ConfirmDialog } from "../../components/shared/ConfirmDialog"
+import "./movimientos-mobile.css"
 import { SlidingNames, SlidingText } from "../../components/shared/SlidingText"
 import { CategoryBadge } from "../../components/shared/CategoryBadge"
 import { formatoARS } from "../../lib/money"

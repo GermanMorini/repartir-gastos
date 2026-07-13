@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card"
 import { getCategoria } from "../../lib/categorias"
 import { formatoARS, porcentaje } from "../../lib/money"
 import type { ResumenCategoria } from "../../types"
+import { sumCategoryAmounts } from "../../domain/calculations/categories"
 
 export function CategoryPie({ data }: { data: ResumenCategoria[] }) {
   const radio = 72
@@ -34,7 +35,7 @@ export function CategoryPie({ data }: { data: ResumenCategoria[] }) {
         return segmento
       })}
       <text dominantBaseline="middle" textAnchor="middle" x="90" y="84">Total</text>
-      <text dominantBaseline="middle" textAnchor="middle" x="90" y="104">{formatoARS.format(data.reduce((total, item) => total + item.monto, 0))}</text>
+      <text dominantBaseline="middle" textAnchor="middle" x="90" y="104">{formatoARS.format(sumCategoryAmounts(data))}</text>
     </svg>
   )
 }
@@ -55,7 +56,7 @@ export function CategoryDetailList({ data }: { data: ResumenCategoria[] }) {
   )
 }
 
-export function CategoryChartShareCard({ data, total }: { data: ResumenCategoria[]; total: number; fecha: string }) {
+export function CategoryChartShareCard({ data, total }: { data: ResumenCategoria[]; total: number }) {
   return (
     <Card className="category-share-card">
       <header>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { FilaCalculo, Movimiento, Persona, ResumenCategoria, SaldoPersona, TransferenciaPendiente } from "../../types"
 import { useAdaptivePageSize, useIsMobile } from "../../lib/viewport"
+import "./resumen-mobile.css"
 import { RepartirDialog } from "../total/RepartirDialog"
 import { CalculosDialog } from "./CalculosDialog"
 import { PersonaResumenItem } from "./PersonaResumenItem"
@@ -32,7 +33,6 @@ type ResumenSectionProps = {
   settlementOpen?: boolean
   onSettlementOpenChange?: (open: boolean) => void
   pendientes?: TransferenciaPendiente[]
-  resumenCopiable?: string
   onShareReparto?: () => void
   suppressListAnimation?: boolean
 }
@@ -52,7 +52,6 @@ export function ResumenSection({
   settlementOpen = false,
   onSettlementOpenChange = () => undefined,
   pendientes = [],
-  resumenCopiable = "",
   onShareReparto = () => undefined,
   suppressListAnimation = false,
 }: ResumenSectionProps) {
@@ -130,7 +129,7 @@ export function ResumenSection({
             />
           </div>
         ) : null}
-        {isMobile ? <RepartirDialog open={settlementOpen} onOpenChange={onSettlementOpenChange} pendientes={pendientes} resumenCopiable={resumenCopiable} onShare={onShareReparto} /> : null}
+        {isMobile ? <RepartirDialog open={settlementOpen} onOpenChange={onSettlementOpenChange} pendientes={pendientes} onShare={onShareReparto} /> : null}
         {isMobile ? <Button className="btn-outline summary-share-mobile" onClick={onShareLink} type="button"><ShareIcon data-icon="inline-start" />Compartir resumen</Button> : null}
       </div>
     </Card>
